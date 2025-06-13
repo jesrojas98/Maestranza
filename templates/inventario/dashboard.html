@@ -7,7 +7,7 @@
 {% block page_actions %}
 <div class="btn-group" role="group">
     <select class="form-select" onchange="cambiarSucursal(this.value)">
-        <option value="">Todas las sucursales</option>
+        <option value="">Todas las Bodegas</option>
         {% for sucursal in sucursales %}
             <option value="{{ sucursal.id }}" {% if sucursal == sucursal_actual %}selected{% endif %}>
                 {{ sucursal.nombre }}

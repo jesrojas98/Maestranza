@@ -6,7 +6,7 @@
 
 {% block page_actions %}
 <a href="{% url 'lista_sucursales' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left"></i> Volver a Sucursales
+    <i class="bi bi-arrow-left"></i> Volver a Bodegas
 </a>
 {% endblock %}
 
@@ -16,7 +16,7 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-building"></i> Información de la Sucursal
+                    <i class="bi bi-building"></i> Información de la Bodega
                 </h5>
             </div>
             <div class="card-body">
@@ -25,7 +25,7 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.nombre.id_for_label }}" class="form-label">
-                            <i class="bi bi-building"></i> Nombre de la Sucursal *
+                            <i class="bi bi-building"></i> Nombre de la Bodega *
                         </label>
                         {{ form.nombre }}
                         {% if form.nombre.errors %}
@@ -35,7 +35,7 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        <div class="form-text">Nombre identificativo de la sucursal</div>
+                        <div class="form-text">Nombre identificativo de la Bodega</div>
                     </div>
 
                     <div class="mb-3">
@@ -50,7 +50,7 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        <div class="form-text">Dirección completa de la sucursal</div>
+                        <div class="form-text">Dirección completa de la Bodega</div>
                     </div>
 
                     <div class="mb-3">
@@ -65,22 +65,22 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        <div class="form-text">Número de contacto de la sucursal</div>
+                        <div class="form-text">Número de contacto de la Bodega</div>
                     </div>
 
                     <div class="mb-4">
                         <div class="form-check">
                             {{ form.activa }}
                             <label class="form-check-label" for="{{ form.activa.id_for_label }}">
-                                <i class="bi bi-check-circle"></i> Sucursal activa
+                                <i class="bi bi-check-circle"></i> SucBodegaursal activa
                             </label>
-                            <div class="form-text">Las sucursales inactivas no aparecen en las operaciones</div>
+                            <div class="form-text">Las Bodegas inactivas no aparecen en las operaciones</div>
                         </div>
                     </div>
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg"></i> Crear Sucursal
+                            <i class="bi bi-check-lg"></i> Crear Bodega
                         </button>
                         <a href="{% url 'lista_sucursales' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Cancelar
@@ -95,17 +95,17 @@
         <div class="card">
             <div class="card-header">
                 <h6 class="card-title mb-0">
-                    <i class="bi bi-info-circle"></i> ¿Qué sucede al crear una sucursal?
+                    <i class="bi bi-info-circle"></i> ¿Qué sucede al crear una Bodega?
                 </h6>
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
                     <h6><i class="bi bi-gear"></i> Procesos automáticos:</h6>
                     <ul class="mb-0 small">
-                        <li>Se crea inventario en esta sucursal para todos los productos existentes</li>
+                        <li>Se crea inventario en esta Bodega para todos los productos existentes</li>
                         <li>El stock inicial será 0 para todos los productos</li>
                         <li>Podrás registrar movimientos inmediatamente</li>
-                        <li>Aparecerá en el selector de sucursales del dashboard</li>
+                        <li>Aparecerá en el selector de Bodega del dashboard</li>
                     </ul>
                 </div>
                 
@@ -130,8 +130,8 @@
                 <div class="small">
                     <p><strong>Nombres descriptivos:</strong></p>
                     <ul class="mb-2">
-                        <li>Sucursal Centro</li>
-                        <li>Sucursal Norte</li>
+                        <li>Bodega Centro</li>
+                        <li>Bodega Norte</li>
                         <li>Bodega Principal</li>
                         <li>Punto de Venta Mall</li>
                     </ul>

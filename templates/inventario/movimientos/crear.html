@@ -39,7 +39,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="{{ form.sucursal.id_for_label }}" class="form-label">
-                                    <i class="bi bi-building"></i> Sucursal *
+                                    <i class="bi bi-building"></i> Bodega *
                                 </label>
                                 {{ form.sucursal }}
                                 {% if form.sucursal.errors %}
@@ -91,7 +91,7 @@
                         <div class="col-md-6" id="sucursal-destino-field" style="display: none;">
                             <div class="mb-3">
                                 <label for="{{ form.sucursal_destino.id_for_label }}" class="form-label">
-                                    <i class="bi bi-arrow-right"></i> Sucursal Destino *
+                                    <i class="bi bi-arrow-right"></i> Bodega Destino *
                                 </label>
                                 {{ form.sucursal_destino }}
                                 {% if form.sucursal_destino.errors %}
@@ -184,9 +184,9 @@
                 <div class="mb-3">
                     <div class="d-flex align-items-center mb-2">
                         <span class="badge bg-info me-2">Transferencia</span>
-                        <small>Mueve stock entre sucursales</small>
+                        <small>Mueve stock entre Bodegas</small>
                     </div>
-                    <small class="text-muted">Requiere sucursal destino</small>
+                    <small class="text-muted">Requiere Bodega destino</small>
                 </div>
                 
                 <div class="mb-0">
@@ -202,7 +202,7 @@
         <div class="card mt-3">
             <div class="card-header">
                 <h6 class="card-title mb-0">
-                    <i class="bi bi-building"></i> Stock por Sucursal
+                    <i class="bi bi-building"></i> Stock por Bodega
                 </h6>
             </div>
             <div class="card-body">

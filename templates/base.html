@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        .navbar {
+            z-index: 1050 !important;
+        }
         :root {
             --sidebar-width: 250px;
         }
@@ -26,7 +29,7 @@
             top: 0;
             bottom: 0;
             left: 0;
-            z-index: 100;
+            z-index: 1040 !important;
             padding: 48px 0 0;
             box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
             width: var(--sidebar-width);
@@ -109,26 +112,54 @@
             background: rgba(255,255,255,0.1);
             border-radius: 8px;
             padding: 0.5rem;
+            z-index: 1030 !important;
+            position: relative;
         }
+    @media (max-width: 768px) {
+    .navbar {
+        position: fixed !important;
+        top: 0 !important;
+        width: 100% !important;
+        z-index: 1050 !important;
+        min-height: 60px !important;
+        padding: 0.5rem !important;
+    }
+    
+    .navbar-brand {
+        font-size: 0.9rem !important;
+        padding: 0.5rem !important;
+    }
+    
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        top: 60px !important;
+        height: calc(100vh - 60px) !important;
+        z-index: 1040 !important;
+        padding-top: 1rem;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        margin-top: 60px !important;
+        width: 100% !important;
+    }
+    
+    .user-info-dropdown {
+        display: block !important;
+        background: rgba(255,255,255,0.9) !important;
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+        z-index: 1030 !important;
+    }
+}
         
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease-in-out;
-            }
-            
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .user-info-dropdown {
-                display: none;
-            }
-        }
+        
+    
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -136,63 +167,68 @@
 <body>
     <!-- Header -->
     <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="{% url 'dashboard' %}">
-            <i class="bi bi-tools"></i> Maestranzas Unidas S.A
-        </a>
-        
-        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" 
-                onclick="toggleSidebar()" aria-label="Toggle navigation">
+    <div class="d-flex w-100 align-items-center position-relative">
+        <!-- Botón hamburguesa (izquierda en móvil) -->
+        <button class="navbar-toggler d-md-none me-2" type="button" 
+                onclick="toggleSidebar()" aria-label="Toggle navigation"
+                style="position: relative; z-index: 1051;">
             <span class="navbar-toggler-icon"></span>
         </button>
         
-
-            <!-- Usuario -->
-            <div class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle text-white me-3" href="#" role="button" data-bs-toggle="dropdown">
-                    <div class="d-inline-flex align-items-center">
-                        <div class="user-avatar">
-                            {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper }}
-                        </div>
-                        <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+        <!-- Logo (centro-izquierda) -->
+        <a class="navbar-brand col-md-3 col-lg-2 me-auto px-3 fs-6" href="{% url 'dashboard' %}">
+            <i class="bi bi-tools"></i>
+            <span class="d-none d-sm-inline">Maestranzas Unidas S.A</span>
+            <span class="d-inline d-sm-none">Maestranzas</span> 
+        </a>
+        
+        <!-- Usuario (derecha) -->
+        <div class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle text-white me-3" href="#" role="button" data-bs-toggle="dropdown">
+                <div class="d-inline-flex align-items-center">
+                    <div class="user-avatar">
+                        {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper }}
                     </div>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                        <h6 class="dropdown-header">
-                            {{ user.get_full_name|default:user.username }}
-                            <br><small class="text-muted">{{ permisos_usuario.rol }}</small>
-                        </h6>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{% url 'mi_perfil' %}">
-                        <i class="bi bi-person me-2"></i>Mi Perfil
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'cambiar_password' %}">
-                        <i class="bi bi-key me-2"></i>Cambiar Contraseña
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    
-                    <!-- Accesos rápidos según permisos -->
-                    {% if permisos_usuario.puede_gestionar_productos %}
-                    <li><a class="dropdown-item" href="{% url 'crear_producto' %}">
-                        <i class="bi bi-plus me-2"></i>Nuevo Producto
-                    </a></li>
-                    {% endif %}
-                    
-                    {% if permisos_usuario.puede_crear_usuarios %}
-                    <li><a class="dropdown-item" href="{% url 'crear_usuario' %}">
-                        <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
-                    </a></li>
-                    {% endif %}
-                    
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
-                    </a></li>
-                </ul>
-            </div>
+                    <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <h6 class="dropdown-header">
+                        {{ user.get_full_name|default:user.username }}
+                        <br><small class="text-muted">{{ permisos_usuario.rol }}</small>
+                    </h6>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'mi_perfil' %}">
+                    <i class="bi bi-person me-2"></i>Mi Perfil
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'cambiar_password' %}">
+                    <i class="bi bi-key me-2"></i>Cambiar Contraseña
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                
+                <!-- Accesos rápidos según permisos -->
+                {% if permisos_usuario.puede_gestionar_productos %}
+                <li><a class="dropdown-item" href="{% url 'crear_producto' %}">
+                    <i class="bi bi-plus me-2"></i>Nuevo Producto
+                </a></li>
+                {% endif %}
+                
+                {% if permisos_usuario.puede_crear_usuarios %}
+                <li><a class="dropdown-item" href="{% url 'crear_usuario' %}">
+                    <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
+                </a></li>
+                {% endif %}
+                
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                    <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                </a></li>
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
     
 
     <div class="container-fluid">
@@ -245,7 +281,7 @@
                             {% else %}
                                 <a class="nav-link text-muted" href="#" onclick="alert('Seleccione una sucursal primero')">
                                     <i class="bi bi-geo-alt"></i> Ubicaciones
-                                    <span class="badge bg-warning permission-badge">Sin Sucursal</span>
+                                    <span class="badge bg-warning permission-badge">Sin Bodega</span>
                                 </a>
                             {% endif %}
                         </li>
@@ -355,7 +391,7 @@
                     <div class="mt-auto pt-3 px-3">
                         <div class="small text-muted">
                             <i class="bi bi-building me-1"></i>
-                            <strong>Sucursal:</strong><br>
+                            <strong>Bodega:</strong><br>
                             <span>{{ request.session.sucursal_nombre|default:"No seleccionada" }}</span>
                         </div>
                     </div>

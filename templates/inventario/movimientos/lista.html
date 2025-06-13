@@ -21,9 +21,9 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="sucursal" class="form-label">Sucursal</label>
+                <label for="sucursal" class="form-label">Bodega</label>
                 <select class="form-select" id="sucursal" name="sucursal">
-                    <option value="">Todas las sucursales</option>
+                    <option value="">Todas las Bodegas</option>
                     {% for sucursal in sucursales %}
                         <option value="{{ sucursal.id }}" {% if sucursal.id == filtros.sucursal|add:0 %}selected{% endif %}>
                             {{ sucursal.nombre }}
@@ -62,7 +62,7 @@
                             <th>Fecha</th>
                             <th>Producto</th>
                             <th>Tipo</th>
-                            <th>Sucursal</th>
+                            <th>Bodega</th>
                             <th>Cantidad</th>
                             <th>Stock Anterior</th>
                             <th>Stock Nuevo</th>

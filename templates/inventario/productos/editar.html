@@ -436,7 +436,7 @@
                         <dt class="col-sm-5">Stock Total:</dt>
                         <dd class="col-sm-7">{{ producto.get_stock_total }} {{ producto.unidad_medida }}</dd>
                         
-                        <dt class="col-sm-5">Sucursales:</dt>
+                        <dt class="col-sm-5">Bodegas:</dt>
                         <dd class="col-sm-7">{{ producto.inventario_set.count }}</dd>
                         
                         {% if producto.maneja_lotes %}
@@ -461,7 +461,7 @@
                     <div class="alert alert-warning">
                         <h6>Al editar este producto:</h6>
                         <ul class="mb-0 small">
-                            <li>Los cambios afectarán todas las sucursales</li>
+                            <li>Los cambios afectarán todas las Bodegas</li>
                             <li>El historial de movimientos se conserva</li>
                             <li>Cambiar configuraciones de lotes puede requerir ajustes</li>
                         </ul>

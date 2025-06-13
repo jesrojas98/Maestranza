@@ -31,7 +31,7 @@
             <div class="col-md-3">
                 <label for="sucursal" class="form-label">Sucursal</label>
                 <select class="form-select" id="sucursal" name="sucursal">
-                    <option value="">Todas las sucursales</option>
+                    <option value="">Todas las Bodegas</option>
                     {% for sucursal in sucursales %}
                         <option value="{{ sucursal.id }}" {% if sucursal.id == sucursal_seleccionada|add:0 %}selected{% endif %}>
                             {{ sucursal.nombre }}
@@ -106,7 +106,7 @@
                         <tr>
                             <th>Prioridad</th>
                             <th>Producto</th>
-                            <th>Sucursal</th>
+                            <th>Bodega</th>
                             <th>Tipo</th>
                             <th>Mensaje</th>
                             <th>Fecha</th>
