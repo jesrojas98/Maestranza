@@ -168,7 +168,11 @@ def dashboard(request):
         
         # 5. Movimientos recientes de esta sucursal
         movimientos_recientes = []
-        user_perfil = request.user.perfil    
+        if request.user.is_authenticated:
+            user_perfil = request.user.perfil
+        else:
+            from django.shortcuts import redirect
+            return redirect('/admin/')  # Redirige al login de admin  
         if user_perfil.puede_gestionar_inventario():
             movimientos_recientes = MovimientoInventario.objects.filter(
                 sucursal=sucursal_activa
@@ -184,7 +188,11 @@ def dashboard(request):
             'producto', 'usuario'
         ).order_by('-fecha')[:10]
 
-    user_perfil = request.user.perfil    
+    if request.user.is_authenticated:
+        user_perfil = request.user.perfil
+    else:
+        from django.shortcuts import redirect
+        return redirect('/admin/')  # Redirige al login de admin   
     if user_perfil.puede_ver_alertas():
             # Gestores e admins ven alertas activas
             alertas_count = AlertaStock.objects.filter(
