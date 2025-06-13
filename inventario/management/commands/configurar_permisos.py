@@ -4,12 +4,17 @@ from inventario.models import crear_grupos_y_permisos, PerfilUsuario
 
 class Command(BaseCommand):
     help = 'Configura grupos, permisos y crea usuario administrador inicial'
-
+    
     def add_arguments(self, parser):
         parser.add_argument(
             '--crear-admin',
             action='store_true',
             help='Crear usuario administrador inicial',
+        )
+        parser.add_argument(
+            '--arreglar-admin',
+            action='store_true',
+            help='Arreglar perfil del usuario admin existente',
         )
         parser.add_argument(
             '--username',
@@ -56,43 +61,76 @@ class Command(BaseCommand):
             )
             self.stdout.write(f'📝 Perfil creado para {user.username}: {rol}')
 
-        # Crear usuario administrador inicial si se solicita
-        if options['crear_admin']:
+        # Arreglar usuario admin existente
+        if options['arreglar_admin'] or options['crear_admin']:
             username = options['username']
-            email = options['email']
-            password = options['password']
             
-            if User.objects.filter(username=username).exists():
-                self.stdout.write(
-                    self.style.WARNING(f'⚠️  Usuario {username} ya existe')
+            try:
+                # Buscar usuario admin existente
+                admin_user = User.objects.get(username=username)
+                self.stdout.write(f'👤 Usuario {username} encontrado')
+                
+                # Asegurar que es superuser
+                admin_user.is_staff = True
+                admin_user.is_superuser = True
+                admin_user.save()
+                
+                # Crear o actualizar perfil
+                perfil, created = PerfilUsuario.objects.get_or_create(
+                    user=admin_user,
+                    defaults={
+                        'rol': 'administrador',
+                        'activo': True
+                    }
                 )
-            else:
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password,
-                    first_name='Administrador',
-                    last_name='Sistema',
-                    is_staff=True,
-                    is_superuser=True
-                )
                 
-                # Configurar perfil
-                user.perfil.rol = 'administrador'
-                user.perfil.activo = True
-                user.perfil.save()
+                if not created:
+                    perfil.rol = 'administrador'
+                    perfil.activo = True
+                    perfil.save()
                 
-                # Asignar a grupo
-                admin_group = Group.objects.get(name='Administradores')
-                user.groups.add(admin_group)
+                # Asignar a grupo administradores
+                try:
+                    admin_group = Group.objects.get(name='Administradores')
+                    admin_user.groups.add(admin_group)
+                    self.stdout.write(f'👥 Usuario agregado al grupo Administradores')
+                except Group.DoesNotExist:
+                    self.stdout.write(self.style.WARNING('⚠️ Grupo Administradores no encontrado'))
                 
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f'✅ Usuario administrador creado: {username}'
+                    self.style.SUCCESS(f'✅ Usuario {username} configurado como administrador')
+                )
+                
+            except User.DoesNotExist:
+                if options['crear_admin']:
+                    # Crear nuevo usuario admin
+                    email = options['email']
+                    password = options['password']
+                    
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        first_name='Administrador',
+                        last_name='Sistema',
+                        is_staff=True,
+                        is_superuser=True
                     )
-                )
-                self.stdout.write(f'📧 Email: {email}')
-                self.stdout.write(f'🔑 Contraseña: {password}')
+                    
+                    # Configurar perfil
+                    PerfilUsuario.objects.create(
+                        user=user,
+                        rol='administrador',
+                        activo=True
+                    )
+                    
+                    # Asignar a grupo
+                    admin_group = Group.objects.get(name='Administradores')
+                    user.groups.add(admin_group)
+                    
+                    self.stdout.write(
+                        self.style.SUCCESS(f'✅ Usuario administrador creado: {username}')
+                    )
 
         self.stdout.write(
             self.style.SUCCESS('🎉 Configuración completada exitosamente!')
