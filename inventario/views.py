@@ -498,111 +498,87 @@ def detalle_producto(request, producto_id):
 
 @puede_gestionar_productos
 def crear_producto(request):
-    """Vista para crear un nuevo producto con imagen"""
+    """Vista para crear un nuevo producto con imagen usando ProductoForm"""
     if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                # Datos básicos del producto
-                codigo = request.POST.get('codigo', '').strip().upper()
-                nombre = request.POST.get('nombre', '').strip()
-                descripcion = request.POST.get('descripcion', '').strip()
-                categoria_id = request.POST.get('categoria')
-                unidad_medida = request.POST.get('unidad_medida', 'unidad')
-                stock_minimo = int(request.POST.get('stock_minimo', 0))
-                maneja_lotes = request.POST.get('maneja_lotes') == 'on'
-                maneja_vencimiento = request.POST.get('maneja_vencimiento') == 'on'
-                activo = request.POST.get('activo', 'on') == 'on'  # Por defecto activo
-                
-                # Validaciones básicas
-                if not codigo or not nombre:
-                    messages.error(request, 'El código y nombre son obligatorios.')
-                    return render(request, 'inventario/productos/crear.html', {
-                        'categorias': Categoria.objects.all().order_by('nombre'),
-                        'etiquetas': Etiqueta.objects.all(),
-                        'form_data': request.POST
-                    })
-                
-                # Verificar código único
-                if Producto.objects.filter(codigo=codigo).exists():
-                    messages.error(request, f'Ya existe un producto con el código "{codigo}".')
-                    return render(request, 'inventario/productos/crear.html', {
-                        'categorias': Categoria.objects.all().order_by('nombre'),
-                        'etiquetas': Etiqueta.objects.all(),
-                        'form_data': request.POST
-                    })
-                
-                # Obtener categoría
-                categoria = get_object_or_404(Categoria, id=categoria_id) if categoria_id else None
-                
-                # Crear producto
-                producto = Producto.objects.create(
-                    codigo=codigo,
-                    nombre=nombre,
-                    descripcion=descripcion,
-                    categoria=categoria,
-                    unidad_medida=unidad_medida,
-                    stock_minimo=stock_minimo,
-                    maneja_lotes=maneja_lotes,
-                    maneja_vencimiento=maneja_vencimiento,
-                    activo=activo
-                )
-                
-                # Manejar imagen si se subió
-                imagen = request.FILES.get('imagen')
-                if imagen:
-                    # Validar tipo de archivo
-                    ext = os.path.splitext(imagen.name)[1].lower()
-                    if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
-                        messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF o WebP.')
-                        producto.delete()
-                        return render(request, 'inventario/productos/crear.html', {
-                            'categorias': Categoria.objects.all().order_by('nombre'),
-                            'etiquetas': Etiqueta.objects.all(),
-                            'form_data': request.POST
-                        })
+        form = ProductoForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # Usar el formulario para obtener datos limpios
+                    codigo = form.cleaned_data['codigo']
+                    nombre = form.cleaned_data['nombre']
+                    descripcion = form.cleaned_data['descripcion']
+                    categoria = form.cleaned_data['categoria']
+                    unidad_medida = form.cleaned_data['unidad_medida']
+                    stock_minimo = form.cleaned_data['stock_minimo']
+                    maneja_lotes = form.cleaned_data['maneja_lotes']
+                    maneja_vencimiento = form.cleaned_data['maneja_vencimiento']
+                    activo = form.cleaned_data['activo']
                     
-                    # Validar tamaño (5MB máximo)
-                    if imagen.size > 5 * 1024 * 1024:
-                        messages.error(request, 'La imagen es demasiado grande. Máximo 5MB.')
-                        producto.delete()
-                        return render(request, 'inventario/productos/crear.html', {
-                            'categorias': Categoria.objects.all().order_by('nombre'),
-                            'etiquetas': Etiqueta.objects.all(),
-                            'form_data': request.POST
-                        })
-                    
-                    # Guardar imagen
-                    producto.imagen = imagen
-                    producto.save()
-                
-                # Manejar etiquetas
-                etiquetas_ids = request.POST.getlist('etiquetas')
-                if etiquetas_ids:
-                    etiquetas = Etiqueta.objects.filter(id__in=etiquetas_ids)
-                    producto.etiquetas.set(etiquetas)
-                
-                # Crear inventario inicial en todas las sucursales
-                sucursales = Sucursal.objects.filter(activa=True)
-                for sucursal in sucursales:
-                    Inventario.objects.get_or_create(
-                        producto=producto,
-                        sucursal=sucursal,
-                        defaults={'cantidad': 0}
-                    )
-                
-                messages.success(request, f'Producto "{producto.nombre}" creado exitosamente.')
-                return redirect('detalle_producto', producto_id=producto.id)
-                
-        except ValueError as e:
-            messages.error(request, f'Error en los datos: {str(e)}')
-        except Exception as e:
-            messages.error(request, f'Error al crear el producto: {str(e)}')
+                    # Verificar código único (validación adicional)
+                    if Producto.objects.filter(codigo=codigo).exists():
+                        form.add_error('codigo', f'Ya existe un producto con el código "{codigo}".')
+                        messages.error(request, f'Ya existe un producto con el código "{codigo}".')
+                    else:
+                        # Crear producto usando el formulario
+                        producto = form.save()
+                        
+                        # Validaciones adicionales para imagen (mantener lógica original)
+                        imagen = request.FILES.get('imagen')
+                        if imagen:
+                            # Validar tipo de archivo (validación adicional)
+                            ext = os.path.splitext(imagen.name)[1].lower()
+                            if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                                messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF o WebP.')
+                                producto.delete()
+                                form = ProductoForm(request.POST)  # Recrear form con datos
+                            elif imagen.size > 5 * 1024 * 1024:
+                                messages.error(request, 'La imagen es demasiado grande. Máximo 5MB.')
+                                producto.delete()
+                                form = ProductoForm(request.POST)  # Recrear form con datos
+                            else:
+                                # Imagen válida, ya se guardó con form.save()
+                                pass
+                        
+                        # Solo continuar si el producto no fue eliminado por errores de imagen
+                        if not messages.get_messages(request) or not any(msg.level_tag == 'error' for msg in messages.get_messages(request)):
+                            # Manejar etiquetas (mantener lógica original si es necesaria)
+                            etiquetas_ids = request.POST.getlist('etiquetas')
+                            if etiquetas_ids:
+                                etiquetas = Etiqueta.objects.filter(id__in=etiquetas_ids)
+                                producto.etiquetas.set(etiquetas)
+                            
+                            # Crear inventario inicial en todas las sucursales (mantener lógica original)
+                            sucursales = Sucursal.objects.filter(activa=True)
+                            for sucursal in sucursales:
+                                Inventario.objects.get_or_create(
+                                    producto=producto,
+                                    sucursal=sucursal,
+                                    defaults={'cantidad': 0}
+                                )
+                            
+                            messages.success(request, f'Producto "{producto.nombre}" creado exitosamente.')
+                            return redirect('detalle_producto', producto_id=producto.id)
+                            
+            except ValueError as e:
+                messages.error(request, f'Error en los datos: {str(e)}')
+                # Mantener el formulario con los datos ingresados
+            except Exception as e:
+                messages.error(request, f'Error al crear el producto: {str(e)}')
+                # Mantener el formulario con los datos ingresados
+        else:
+            # Formulario no válido - los errores se mostrarán automáticamente
+            messages.error(request, 'Por favor corrija los errores en el formulario.')
+    else:
+        # GET request - crear formulario vacío
+        form = ProductoForm()
     
-    # GET request o error en POST
+    # Contexto combinado: form + datos originales para compatibilidad
     context = {
+        'form': form,  # ← AGREGADO: formulario para el template
         'categorias': Categoria.objects.all().order_by('nombre'),
         'etiquetas': Etiqueta.objects.all(),
-        'form_data': request.POST if request.method == 'POST' else {}
+        'form_data': request.POST if request.method == 'POST' else {}  # Mantener para compatibilidad
     }
     return render(request, 'inventario/productos/crear.html', context)
 
