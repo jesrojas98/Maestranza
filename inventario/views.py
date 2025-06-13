@@ -92,6 +92,7 @@ def logout_view(request):
 # =================
 # DASHBOARD
 # =================
+@login_required(login_url='login')
 def dashboard(request):
     """Dashboard con estadísticas correctas sin duplicados"""
     

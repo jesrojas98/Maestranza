@@ -1,10 +1,16 @@
 from django.urls import path
 from . import views
+from django.shortcuts import redirect
+
+def admin_login_redirect(request):
+    return redirect('login')
 
 urlpatterns = [
+    path('admin/login/', admin_login_redirect, name='admin_login_override'),
     # ==================
     # AUTENTICACIÓN
     # ==================
+
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
 
