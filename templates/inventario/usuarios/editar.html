@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.user-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px 15px 0 0;
+    padding: 2rem;
+    text-align: center;
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 24px;
+    margin: 0 auto 1rem;
+    background: rgba(255,255,255,0.2);
+    border: 3px solid rgba(255,255,255,0.3);
+}
+
+.status-switch {
+    transform: scale(1.2);
+}
+
+.danger-zone {
+    background: #fff5f5;
+    border: 2px solid #fed7d7;
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.comparison-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.change-indicator {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-edit me-2"></i>{{ titulo }}</h2>
+            <p class="text-muted mb-0">Modificar información y permisos del usuario</p>
+        </div>
+        <div>
+            <a href="{% url 'detalle_usuario' user_editado.id %}" class="btn btn-info me-2">
+                <i class="fas fa-eye me-2"></i>Ver Detalles
+            </a>
+            <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario Principal -->
+        <div class="col-lg-8">
+            <div class="card form-card">
+                <!-- Header del Usuario -->
+                <div class="user-header">
+                    <div class="user-avatar">
+                        {{ user_editado.first_name|first|default:user_editado.username|first|upper }}{{ user_editado.last_name|first|upper }}
+                    </div>
+                    <h4>{{ user_editado.get_full_name|default:user_editado.username }}</h4>
+                    <p class="mb-0 opacity-75">@{{ user_editado.username }}</p>
+                    <small class="opacity-75">Miembro desde {{ user_editado.date_joined|date:"d/m/Y" }}</small>
+                </div>
+
+                <div class="card-body p-4">
+                    <form method="post" id="editUserForm">
+                        {% csrf_token %}
+                        
+                        <!-- Información Personal -->
+                        <div class="mb-4">
+                            <h5 class="text-primary"><i class="fas fa-user me-2"></i>Información Personal</h5>
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                        Nombre <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                        Apellido <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                                        Nombre de Usuario <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.username }}
+                                    {% if form.username.errors %}
+                                        <div class="text-danger small">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                        Correo Electrónico <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración del Sistema -->
+                        <div class="mb-4">
+                            <h5 class="text-primary"><i class="fas fa-cog me-2"></i>Configuración del Sistema</h5>
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.rol.id_for_label }}" class="form-label">
+                                        Rol del Usuario <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.rol }}
+                                    {% if user_editado.perfil.rol != form.rol.value %}
+                                        <div class="change-indicator bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            Cambio de rol: {{ user_editado.perfil.get_rol_display }} → {{ form.rol.value|default:"Nuevo rol" }}
+                                        </div>
+                                    {% endif %}
+                                    {% if form.rol.errors %}
+                                        <div class="text-danger small">{{ form.rol.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.sucursal_asignada.id_for_label }}" class="form-label">
+                                        Sucursal Asignada
+                                    </label>
+                                    {{ form.sucursal_asignada }}
+                                    {% if form.sucursal_asignada.errors %}
+                                        <div class="text-danger small">{{ form.sucursal_asignada.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Estado Activo -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.activo }}
+                                        <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                                            Usuario Activo
+                                        </label>
+                                    </div>
+                                    <div class="form-text">{{ form.activo.help_text }}</div>
+                                    {% if form.activo.errors %}
+                                        <div class="text-danger small">{{ form.activo.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            Cuenta Django Activa
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Control de acceso a nivel de Django</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cambio de Contraseña -->
+                        <div class="mb-4">
+                            <h5 class="text-primary"><i class="fas fa-key me-2"></i>Cambiar Contraseña</h5>
+                            <hr>
+                            
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Deje estos campos en blanco si no desea cambiar la contraseña.
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.new_password.id_for_label }}" class="form-label">
+                                        Nueva Contraseña
+                                    </label>
+                                    {{ form.new_password }}
+                                    <div class="form-text">{{ form.new_password.help_text }}</div>
+                                    {% if form.new_password.errors %}
+                                        <div class="text-danger small">{{ form.new_password.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.new_password_confirm.id_for_label }}" class="form-label">
+                                        Confirmar Nueva Contraseña
+                                    </label>
+                                    {{ form.new_password_confirm }}
+                                    {% if form.new_password_confirm.errors %}
+                                        <div class="text-danger small">{{ form.new_password_confirm.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Errores generales -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                {% if user_editado != request.user %}
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#dangerModal">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Acciones Peligrosas
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary me-2">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Información -->
+        <div class="col-lg-4">
+            <!-- Estado Actual -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-info-circle me-2"></i>Estado Actual</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Estado:</span>
+                        <span class="badge {% if user_editado.perfil.activo %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if user_editado.perfil.activo %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Rol Actual:</span>
+                        <span class="badge {% if user_editado.perfil.rol == 'administrador' %}bg-success{% elif user_editado.perfil.rol == 'gestor_inventario' %}bg-info{% else %}bg-warning{% endif %}">
+                            {{ user_editado.perfil.get_rol_display }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Sucursal:</span>
+                        <span class="text-muted">
+                            {{ user_editado.perfil.sucursal_asignada.nombre|default:"Sin asignar" }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Último acceso:</span>
+                        <span class="text-muted">
+                            {% if user_editado.last_login %}
+                                {{ user_editado.last_login|date:"d/m/Y H:i" }}
+                            {% else %}
+                                Nunca
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas del Usuario -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Actividad</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary mb-0">--</h4>
+                            <small class="text-muted">Movimientos</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-0">--</h4>
+                            <small class="text-muted">Alertas Resueltas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permisos Actuales -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Permisos Actuales</h6>
+                </div>
+                <div class="card-body">
+                    <div class="permission-list">
+                        {% if user_editado.perfil.puede_gestionar_productos %}
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <small>Gestionar productos</small>
+                            </div>
+                        {% endif %}
+                        {% if user_editado.perfil.puede_gestionar_inventario %}
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <small>Gestionar inventario</small>
+                            </div>
+                        {% endif %}
+                        {% if user_editado.perfil.puede_asignar_ubicaciones %}
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <small>Asignar ubicaciones</small>
+                            </div>
+                        {% endif %}
+                        {% if user_editado.perfil.puede_ver_alertas %}
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <small>Ver alertas</small>
+                            </div>
+                        {% endif %}
+                        {% if user_editado.perfil.puede_crear_usuarios %}
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <small>Crear usuarios</small>
+                            </div>
+                        {% endif %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Descargar reportes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Acciones Peligrosas -->
+<div class="modal fade" id="dangerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Acciones Peligrosas
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="danger-zone">
+                    <h6 class="text-danger">⚠️ Zona de Peligro</h6>
+                    <p class="mb-3">Las siguientes acciones son irreversibles y pueden afectar el funcionamiento del sistema:</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-warning" onclick="resetPassword()">
+                            <i class="fas fa-key me-2"></i>Restablecer Contraseña
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="forceLogout()">
+                            <i class="fas fa-sign-out-alt me-2"></i>Cerrar Todas las Sesiones
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    <small class="text-muted">
+                        Estas acciones requieren confirmación adicional y se registran en el log de auditoría.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Validación en tiempo real de contraseñas
+    $('#id_new_password_confirm').on('input', function() {
+        const password = $('#id_new_password').val();
+        const confirm = $(this).val();
+        
+        if (confirm && password !== confirm) {
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Validación del formulario
+    $('#editUserForm').on('submit', function(e) {
+        const newPassword = $('#id_new_password').val();
+        const confirmPassword = $('#id_new_password_confirm').val();
+        
+        if (newPassword && newPassword !== confirmPassword) {
+            e.preventDefault();
+            alert('Las nuevas contraseñas no coinciden.');
+            return false;
+        }
+
+        // Confirmación para cambios críticos
+        const rolActual = '{{ user_editado.perfil.rol }}';
+        const rolNuevo = $('#id_rol').val();
+        
+        if (rolActual !== rolNuevo) {
+            if (!confirm('¿Está seguro de cambiar el rol de este usuario? Esta acción afectará sus permisos inmediatamente.')) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+});
+
+function resetPassword() {
+    if (confirm('¿Está seguro de restablecer la contraseña de este usuario? Se generará una contraseña temporal.')) {
+        // Implementar reset de contraseña
+        alert('Funcionalidad de reset de contraseña - Implementar según necesidades');
+    }
+}
+
+function forceLogout() {
+    if (confirm('¿Está seguro de cerrar todas las sesiones activas de este usuario?')) {
+        // Implementar forzar logout
+        alert('Funcionalidad de forzar logout - Implementar según necesidades');
+    }
+}
+</script>
+{% endblock %}

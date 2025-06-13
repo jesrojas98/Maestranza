@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Inventario - Ferretería{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Font Awesome (para los templates de ubicaciones) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --sidebar-width: 250px;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            width: var(--sidebar-width);
+            background-color: #f8f9fa;
+        }
+        
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .navbar-brand {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            background-color: rgba(0, 0, 0, .25);
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+        }
+        
+        .navbar-nav .nav-link {
+            padding-right: .75rem;
+            padding-left: .75rem;
+            color: #6c757d;
+        }
+        
+        .navbar-nav .nav-link.active {
+            color: #007bff;
+            background-color: #e9ecef;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+        }
+        
+        .card-stats {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        
+        .alert-stock-bajo { border-left: 4px solid #dc3545; }
+        .alert-vencimiento { border-left: 4px solid #fd7e14; }
+        .alert-vencido { border-left: 4px solid #6f42c1; }
+        
+        .badge-stock-alto { background-color: #28a745; }
+        .badge-stock-medio { background-color: #ffc107; color: #000; }
+        .badge-stock-bajo { background-color: #dc3545; }
+        
+        /* NUEVOS ESTILOS PARA PERMISOS */
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-right: 8px;
+        }
+        
+        .permission-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+            margin-left: 0.5rem;
+        }
+        
+        .badge.bg-success { background-color: #28a745 !important; }
+        .badge.bg-secondary { background-color: #6c757d !important; }
+        .badge.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+        .badge.bg-info { background-color: #17a2b8 !important; }
+        .badge.bg-danger { background-color: #dc3545 !important; }
+        
+        .user-info-dropdown {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .user-info-dropdown {
+                display: none;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="{% url 'dashboard' %}">
+            <i class="bi bi-tools"></i> Maestranzas Unidas S.A
+        </a>
+        
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" 
+                onclick="toggleSidebar()" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+
+            <!-- Usuario -->
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle text-white me-3" href="#" role="button" data-bs-toggle="dropdown">
+                    <div class="d-inline-flex align-items-center">
+                        <div class="user-avatar">
+                            {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper }}
+                        </div>
+                        <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <h6 class="dropdown-header">
+                            {{ user.get_full_name|default:user.username }}
+                            <br><small class="text-muted">{{ permisos_usuario.rol }}</small>
+                        </h6>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'mi_perfil' %}">
+                        <i class="bi bi-person me-2"></i>Mi Perfil
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'cambiar_password' %}">
+                        <i class="bi bi-key me-2"></i>Cambiar Contraseña
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    
+                    <!-- Accesos rápidos según permisos -->
+                    {% if permisos_usuario.puede_gestionar_productos %}
+                    <li><a class="dropdown-item" href="{% url 'crear_producto' %}">
+                        <i class="bi bi-plus me-2"></i>Nuevo Producto
+                    </a></li>
+                    {% endif %}
+                    
+                    {% if permisos_usuario.puede_crear_usuarios %}
+                    <li><a class="dropdown-item" href="{% url 'crear_usuario' %}">
+                        <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
+                    </a></li>
+                    {% endif %}
+                    
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar MODIFICADO CON PERMISOS -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <!-- Información del Usuario (móvil) -->
+                    <div class="user-info-dropdown d-md-none mb-3">
+                        <div class="d-flex align-items-center text-dark">
+                            <div class="user-avatar me-2">
+                                {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper }}
+                            </div>
+                            <div>
+                                <small class="fw-bold">{{ user.get_full_name|default:user.username }}</small>
+                                <br><small class="text-muted">{{ permisos_usuario.rol }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                               href="{% url 'dashboard' %}">
+                                <i class="bi bi-house"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'productos' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'lista_productos' %}">
+                                <i class="bi bi-box"></i> Productos
+                                {% if permisos_usuario.puede_gestionar_productos %}
+                                    <span class="badge bg-success permission-badge">Gestión</span>
+                                {% else %}
+                                    <span class="badge bg-secondary permission-badge">Lectura</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            {% if request.session.sucursal_id %}
+                                <a class="nav-link {% if 'ubicaciones' in request.resolver_match.url_name %}active{% endif %}" 
+                                href="{% url 'lista_ubicaciones' sucursal_id=request.session.sucursal_id %}">
+                                    <i class="bi bi-geo-alt"></i> Ubicaciones
+                                    {% if permisos_usuario.puede_asignar_ubicaciones %}
+                                        <span class="badge bg-success permission-badge">Gestión</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary permission-badge">Lectura</span>
+                                    {% endif %}
+                                </a>
+                            {% else %}
+                                <a class="nav-link text-muted" href="#" onclick="alert('Seleccione una sucursal primero')">
+                                    <i class="bi bi-geo-alt"></i> Ubicaciones
+                                    <span class="badge bg-warning permission-badge">Sin Sucursal</span>
+                                </a>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'movimientos' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'lista_movimientos' %}">
+                                <i class="bi bi-arrow-left-right"></i> Movimientos
+                                {% if permisos_usuario.puede_gestionar_inventario %}
+                                    <span class="badge bg-success permission-badge">Gestión</span>
+                                {% else %}
+                                    <span class="badge bg-secondary permission-badge">Lectura</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        
+                        <!-- Alertas (solo si puede verlas) -->
+                        {% if permisos_usuario.puede_ver_alertas %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'alertas' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'alertas_stock' %}">
+                                <i class="bi bi-exclamation-triangle"></i> Alertas
+                                <span class="badge bg-warning permission-badge" id="sidebar-alertas-count">0</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'proveedores' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'lista_proveedores' %}">
+                                <i class="bi bi-truck"></i> Proveedores
+                                {% if permisos_usuario.puede_gestionar_productos %}
+                                    <span class="badge bg-success permission-badge">Gestión</span>
+                                {% else %}
+                                    <span class="badge bg-secondary permission-badge">Lectura</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'reportes' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'reportes' %}">
+                                <i class="bi bi-graph-up"></i> Reportes
+                                <span class="badge bg-info permission-badge">Excel</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Separador -->
+                    <hr class="my-3">
+
+                    <!-- Gestión de Usuarios (Solo Administradores) -->
+                    {% if permisos_usuario.puede_crear_usuarios %}
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-2 mb-1 text-muted text-uppercase">
+                        <span>Administración</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'usuarios' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'lista_usuarios' %}">
+                                <i class="bi bi-people"></i> Usuarios
+                                <span class="badge bg-danger permission-badge">Admin</span>
+                            </a>
+                        </li>
+                    </ul>
+                    {% endif %}
+
+                    <!-- Configuración -->
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                        <span>Configuración</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'sucursales' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'lista_sucursales' %}">
+                                <i class="bi bi-building"></i> Bodegas
+                                {% if permisos_usuario.rol_codigo == 'administrador' %}
+                                    <span class="badge bg-danger permission-badge">Admin</span>
+                                {% else %}
+                                    <span class="badge bg-secondary permission-badge">Lectura</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'categorias' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="{% url 'lista_categorias' %}">
+                                <i class="bi bi-tags"></i> Categorías
+                                {% if permisos_usuario.puede_gestionar_productos %}
+                                    <span class="badge bg-success permission-badge">Gestión</span>
+                                {% else %}
+                                    <span class="badge bg-secondary permission-badge">Lectura</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Mi Perfil (separado) -->
+                    <hr class="my-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'mi_perfil' %}active{% endif %}" 
+                               href="{% url 'mi_perfil' %}">
+                                <i class="bi bi-person-circle"></i> Mi Perfil
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Información de Sucursal Activa -->
+                    <div class="mt-auto pt-3 px-3">
+                        <div class="small text-muted">
+                            <i class="bi bi-building me-1"></i>
+                            <strong>Sucursal:</strong><br>
+                            <span>{{ request.session.sucursal_nombre|default:"No seleccionada" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Page Header -->
+                {% block page_header %}
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        {% block page_actions %}{% endblock %}
+                    </div>
+                </div>
+                {% endblock %}
+
+                <!-- Page Content -->
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebarMenu');
+            sidebar.classList.toggle('show');
+        }
+        
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // NUEVAS FUNCIONES PARA PERMISOS
+        
+        // Actualizar contador de alertas
+        function actualizarContadorAlertas() {
+            {% if permisos_usuario.puede_ver_alertas %}
+            fetch('{% url "api_alertas_count" %}')
+                .then(response => response.json())
+                .then(data => {
+                    const count = data.count || 0;
+                    const navbarCounter = document.getElementById('navbar-alertas-count');
+                    const sidebarCounter = document.getElementById('sidebar-alertas-count');
+                    
+                    if (navbarCounter) navbarCounter.textContent = count;
+                    if (sidebarCounter) sidebarCounter.textContent = count;
+                    
+                    // Mostrar/ocultar contador en navbar
+                    if (navbarCounter) {
+                        if (count > 0) {
+                            navbarCounter.style.display = 'inline-block';
+                        } else {
+                            navbarCounter.style.display = 'none';
+                        }
+                    }
+                    
+                    // Cambiar color del badge en sidebar
+                    if (sidebarCounter) {
+                        sidebarCounter.className = 'badge permission-badge ' + (count > 0 ? 'bg-warning' : 'bg-secondary');
+                    }
+                })
+                .catch(error => console.error('Error actualizando alertas:', error));
+            {% endif %}
+        }
+
+        // Cambiar sucursal
+        function cambiarSucursal(sucursalId) {
+            const formData = new FormData();
+            formData.append('sucursal_id', sucursalId);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+            
+            fetch('{% url "cambiar_sucursal" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al cambiar sucursal');
+            });
+        }
+
+        // Inicializar cuando carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Actualizar contador de alertas
+            actualizarContadorAlertas();
+            
+            // Actualizar cada 30 segundos
+            setInterval(actualizarContadorAlertas, 30000);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

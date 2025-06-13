@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ubicaciones - {{ sucursal_actual.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ubicacion-card {
+        transition: transform 0.2s;
+        border-left: 4px solid #dee2e6;
+    }
+    .ubicacion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .ubicacion-activa {
+        border-left-color: #28a745;
+    }
+    .ubicacion-inactiva {
+        border-left-color: #dc3545;
+        opacity: 0.7;
+    }
+    .ubicacion-llena {
+        border-left-color: #ffc107;
+    }
+    .ubicacion-atencion {
+        border-left-color: #fd7e14;
+    }
+    .progress-thin {
+        height: 8px;
+    }
+    .badge-tipo {
+        font-size: 0.75rem;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-map-marker-alt me-2"></i>Ubicaciones</h2>
+            <p class="text-muted">Gestión de ubicaciones - {{ sucursal_actual.nombre }}</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'crear_ubicacion' sucursal_id=sucursal_actual.id %}" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-1"></i>Nueva Ubicación
+            </a>
+            <a href="{% url 'mapa_ubicaciones' sucursal_id=sucursal_actual.id %}" class="btn btn-outline-info">
+                <i class="fas fa-map me-1"></i>Ver Mapa
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-map-marker-alt fa-2x mb-2"></i>
+                    <h3 class="mb-0">{{ total_ubicaciones }}</h3>
+                    <small>Total Ubicaciones</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3 class="mb-0">{{ ubicaciones_activas }}</h3>
+                    <small>Activas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <h3 class="mb-0">{{ ubicaciones_llenas }}</h3>
+                    <small>Llenas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-2x mb-2"></i>
+                    <h3 class="mb-0">{{ productos_ubicados }}</h3>
+                    <small>Productos Ubicados</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" id="filtrosForm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select">
+                            <option value="">Todos los tipos</option>
+                            <option value="estanteria" {% if request.GET.tipo == 'estanteria' %}selected{% endif %}>Estantería</option>
+                            <option value="bodega" {% if request.GET.tipo == 'bodega' %}selected{% endif %}>Bodega</option>
+                            <option value="vitrina" {% if request.GET.tipo == 'vitrina' %}selected{% endif %}>Vitrina</option>
+                            <option value="deposito" {% if request.GET.tipo == 'deposito' %}selected{% endif %}>Depósito</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="activa" {% if request.GET.estado == 'activa' %}selected{% endif %}>Activas</option>
+                            <option value="inactiva" {% if request.GET.estado == 'inactiva' %}selected{% endif %}>Inactivas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Ocupación</label>
+                        <select name="ocupacion" class="form-select">
+                            <option value="">Todas</option>
+                            <option value="vacia" {% if request.GET.ocupacion == 'vacia' %}selected{% endif %}>Vacías</option>
+                            <option value="disponible" {% if request.GET.ocupacion == 'disponible' %}selected{% endif %}>Disponibles</option>
+                            <option value="llena" {% if request.GET.ocupacion == 'llena' %}selected{% endif %}>Llenas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Buscar</label>
+                        <input type="text" name="q" class="form-control" placeholder="Código o nombre..." value="{{ request.GET.q }}">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Filtrar
+                        </button>
+                        <a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Ubicaciones -->
+    <div class="row">
+        {% for ubicacion in ubicaciones %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card ubicacion-card h-100 
+                {% if not ubicacion.activa %}ubicacion-inactiva
+                {% elif ubicacion.esta_llena %}ubicacion-llena
+                {% elif ubicacion.necesita_atencion %}ubicacion-atencion
+                {% else %}ubicacion-activa{% endif %}">
+                
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">
+                            <strong>{{ ubicacion.codigo }}</strong>
+                            {% if not ubicacion.activa %}
+                                <span class="badge bg-danger badge-tipo ms-2">Inactiva</span>
+                            {% elif ubicacion.esta_llena %}
+                                <span class="badge bg-warning badge-tipo ms-2">Llena</span>
+                            {% elif ubicacion.necesita_atencion %}
+                                <span class="badge bg-warning badge-tipo ms-2">Atención</span>
+                            {% else %}
+                                <span class="badge bg-success badge-tipo ms-2">Activa</span>
+                            {% endif %}
+                        </h6>
+                        <small class="text-muted">{{ ubicacion.get_tipo_display }}</small>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'detalle_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}">
+                                <i class="fas fa-eye me-2"></i>Ver Detalle
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'editar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}">
+                                <i class="fas fa-edit me-2"></i>Editar
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'asignar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}">
+                                <i class="fas fa-boxes me-2"></i>Asignar Productos
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="confirmarEliminacion({{ ubicacion.id }}, '{{ ubicacion.codigo }}')">
+                                <i class="fas fa-trash me-2"></i>Eliminar
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <h6 class="card-title">{{ ubicacion.nombre }}</h6>
+                    {% if ubicacion.descripcion %}
+                        <p class="card-text text-muted small">{{ ubicacion.descripcion|truncatechars:80 }}</p>
+                    {% endif %}
+
+                    <!-- Estadísticas -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <small class="text-muted">Productos</small>
+                            <div class="fw-bold">{{ ubicacion.get_productos_count }}</div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Capacidad</small>
+                            <div class="fw-bold">
+                                {% if ubicacion.capacidad_maxima %}
+                                    {{ ubicacion.get_capacidad_usada }}/{{ ubicacion.capacidad_maxima }}
+                                {% else %}
+                                    {{ ubicacion.get_capacidad_usada }}/∞
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Ocupación</small>
+                            <div class="fw-bold">{{ ubicacion.get_porcentaje_ocupacion }}%</div>
+                        </div>
+                    </div>
+
+                    <!-- Barra de progreso -->
+                    {% if ubicacion.capacidad_maxima %}
+                        <div class="progress progress-thin mb-3">
+                            <div class="progress-bar 
+                                {% if ubicacion.get_porcentaje_ocupacion >= 90 %}bg-danger
+                                {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}bg-warning
+                                {% else %}bg-success{% endif %}" 
+                                style="width: {{ ubicacion.get_porcentaje_ocupacion }}%">
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Productos asignados (preview) -->
+                    {% if ubicacion.inventario_set.exists %}
+                        <div class="mt-3">
+                            <small class="text-muted">Productos asignados:</small>
+                            <div class="mt-1">
+                                {% for inventario in ubicacion.inventario_set.all|slice:":3" %}
+                                    <span class="badge bg-light text-dark me-1 mb-1">
+                                        {{ inventario.producto.nombre|truncatechars:20 }}
+                                    </span>
+                                {% endfor %}
+                                {% if ubicacion.inventario_set.count > 3 %}
+                                    <span class="badge bg-secondary">+{{ ubicacion.inventario_set.count|add:"-3" }} más</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Creada {{ ubicacion.created_at|date:"d/m/Y" }}
+                        </small>
+                        <div>
+                            <a href="{% url 'detalle_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'editar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                    <h5>No hay ubicaciones registradas</h5>
+                    <p class="text-muted">Comienza creando tu primera ubicación para organizar el inventario.</p>
+                    <a href="{% url 'crear_ubicacion' sucursal_id=sucursal_actual.id %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Crear Primera Ubicación
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if is_paginated %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.estado %}estado={{ request.GET.estado }}&{% endif %}{% if request.GET.ocupacion %}ocupacion={{ request.GET.ocupacion }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page=1">Primera</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.estado %}estado={{ request.GET.estado }}&{% endif %}{% if request.GET.ocupacion %}ocupacion={{ request.GET.ocupacion }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.estado %}estado={{ request.GET.estado }}&{% endif %}{% if request.GET.ocupacion %}ocupacion={{ request.GET.ocupacion }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.estado %}estado={{ request.GET.estado }}&{% endif %}{% if request.GET.ocupacion %}ocupacion={{ request.GET.ocupacion }}&{% endif %}{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmación de Eliminación -->
+<div class="modal fade" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar la ubicación <strong id="ubicacionNombre"></strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Esta acción no se puede deshacer. Los productos asignados a esta ubicación quedarán sin ubicación específica.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formEliminar" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmarEliminacion(ubicacionId, ubicacionCodigo) {
+    document.getElementById('ubicacionNombre').textContent = ubicacionCodigo;
+    document.getElementById('formEliminar').action = `/ubicaciones/${ubicacionId}/eliminar/`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+    modal.show();
+}
+
+// Auto-submit form on filter change
+document.addEventListener('DOMContentLoaded', function() {
+    const selects = document.querySelectorAll('#filtrosForm select');
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('filtrosForm').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

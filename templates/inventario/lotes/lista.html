@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}Lotes - {{ producto.nombre }}{% endblock %}
+
+{% block page_title %}Gestión de Lotes - {{ producto.nombre }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'detalle_producto' producto.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver al Producto
+    </a>
+    <a href="{% url 'crear_lote' producto.id %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nuevo Lote
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Información del producto -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-1">{{ producto.nombre }}</h5>
+                <div class="text-muted">
+                    <strong>Código:</strong> <code>{{ producto.codigo }}</code> |
+                    <strong>Categoría:</strong> 
+                    {% if producto.categoria %}
+                        <span class="badge" style="background-color: {{ producto.categoria.color }}">
+                            {{ producto.categoria.nombre }}
+                        </span>
+                    {% else %}
+                        Sin categoría
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h6 class="text-success">{{ lotes_vigentes|length }}</h6>
+                        <small class="text-muted">Vigentes</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-warning">{{ lotes_por_vencer|length }}</h6>
+                        <small class="text-muted">Por vencer</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-danger">{{ lotes_vencidos|length }}</h6>
+                        <small class="text-muted">Vencidos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lotes Vencidos (Críticos) -->
+{% if lotes_vencidos %}
+<div class="card mb-4 border-danger">
+    <div class="card-header bg-danger text-white">
+        <h6 class="card-title mb-0">
+            <i class="bi bi-exclamation-triangle-fill"></i> Lotes Vencidos ({{ lotes_vencidos|length }})
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Código Lote</th>
+                        <th>Proveedor</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Días Vencido</th>
+                        <th>Precio Compra</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lote in lotes_vencidos %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'detalle_lote' lote.id %}" class="text-decoration-none">
+                                <code>{{ lote.codigo }}</code>
+                            </a>
+                        </td>
+                        <td>{{ lote.proveedor.nombre|default:"Sin proveedor" }}</td>
+                        <td>{{ lote.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td>
+                            <span class="badge bg-danger">
+                                {{ lote.dias_vencimiento|add:"-1"|default:"0" }} días
+                            </span>
+                        </td>
+                        <td>${{ lote.precio_compra }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'detalle_lote' lote.id %}" class="btn btn-outline-primary" title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'editar_lote' lote.id %}" class="btn btn-outline-secondary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lotes Por Vencer (30 días) -->
+{% if lotes_por_vencer %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h6 class="card-title mb-0">
+            <i class="bi bi-clock-history"></i> Lotes Próximos a Vencer ({{ lotes_por_vencer|length }})
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Código Lote</th>
+                        <th>Proveedor</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Días Restantes</th>
+                        <th>Precio Compra</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lote in lotes_por_vencer %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'detalle_lote' lote.id %}" class="text-decoration-none">
+                                <code>{{ lote.codigo }}</code>
+                            </a>
+                        </td>
+                        <td>{{ lote.proveedor.nombre|default:"Sin proveedor" }}</td>
+                        <td>{{ lote.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td>
+                            <span class="badge {% if lote.dias_vencimiento <= 7 %}bg-danger{% elif lote.dias_vencimiento <= 15 %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                {{ lote.dias_vencimiento }} días
+                            </span>
+                        </td>
+                        <td>${{ lote.precio_compra }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'detalle_lote' lote.id %}" class="btn btn-outline-primary" title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'editar_lote' lote.id %}" class="btn btn-outline-secondary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lotes Vigentes -->
+{% if lotes_vigentes %}
+<div class="card border-success">
+    <div class="card-header bg-success text-white">
+        <h6 class="card-title mb-0">
+            <i class="bi bi-check-circle-fill"></i> Lotes Vigentes ({{ lotes_vigentes|length }})
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Código Lote</th>
+                        <th>Proveedor</th>
+                        <th>Fecha Compra</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Precio Compra</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lote in lotes_vigentes %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'detalle_lote' lote.id %}" class="text-decoration-none">
+                                <code>{{ lote.codigo }}</code>
+                            </a>
+                        </td>
+                        <td>{{ lote.proveedor.nombre|default:"Sin proveedor" }}</td>
+                        <td>{{ lote.fecha_compra|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if lote.fecha_vencimiento %}
+                                {{ lote.fecha_vencimiento|date:"d/m/Y" }}
+                                {% if lote.dias_vencimiento %}
+                                    <br><small class="text-muted">({{ lote.dias_vencimiento }} días)</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Sin vencimiento</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ lote.precio_compra }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'detalle_lote' lote.id %}" class="btn btn-outline-primary" title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'editar_lote' lote.id %}" class="btn btn-outline-secondary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Sin lotes -->
+{% if not lotes_vigentes and not lotes_por_vencer and not lotes_vencidos %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-box-seam text-muted" style="font-size: 4rem;"></i>
+        <h4 class="text-muted mt-3">No hay lotes registrados</h4>
+        <p class="text-muted">Este producto no tiene lotes registrados aún.</p>
+        <a href="{% url 'crear_lote' producto.id %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Crear primer lote
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

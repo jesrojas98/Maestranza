@@ -1,0 +1,893 @@
+{% extends 'base.html' %}
+{% load static %}
+{% csrf_token %}
+
+{% block title %}Asignar Productos - {{ ubicacion.codigo }} - {{ sucursal_actual.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .asignar-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+    .producto-card {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    .producto-card:hover {
+        border-color: #28a745;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .producto-card.selected {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);
+    }
+    .producto-card.ya-asignado {
+        border-color: #ffc107;
+        background: linear-gradient(135deg, #ffffff 0%, #fffef8 100%);
+    }
+    .producto-card.sin-stock {
+        border-color: #dc3545;
+        background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+        opacity: 0.7;
+    }
+    .filtros-avanzados {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .productos-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .seleccion-masiva {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 100;
+        border-bottom: 1px solid #dee2e6;
+        padding: 15px 0;
+        margin-bottom: 20px;
+    }
+    .capacidad-warning {
+        background: linear-gradient(45deg, #fff3cd, #ffeaa7);
+        border: 1px solid #ffc107;
+    }
+    .capacidad-danger {
+        background: linear-gradient(45deg, #f8d7da, #fab1a0);
+        border: 1px solid #dc3545;
+    }
+    .drag-drop-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 40px 20px;
+        text-align: center;
+        transition: all 0.3s;
+        margin-bottom: 20px;
+    }
+    .drag-drop-zone.drag-over {
+        border-color: #28a745;
+        background: rgba(40, 167, 69, 0.1);
+    }
+    .cantidad-input {
+        width: 80px;
+    }
+    .resumen-asignacion {
+        position: sticky;
+        top: 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .producto-seleccionado {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #28a745;
+    }
+    @media (max-width: 768px) {
+        .filtros-avanzados {
+            padding: 15px;
+        }
+        .productos-container {
+            max-height: 400px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}">Ubicaciones</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'detalle_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}">{{ ubicacion.codigo }}</a></li>
+            <li class="breadcrumb-item active">Asignar Productos</li>
+        </ol>
+    </nav>
+
+    <!-- Header de la Ubicación -->
+    <div class="card mb-4">
+        <div class="card-header asignar-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h3 class="mb-1">
+                        <i class="fas fa-boxes me-2"></i>
+                        Asignar Productos a {{ ubicacion.codigo }}
+                    </h3>
+                    <p class="mb-0 opacity-75">{{ ubicacion.nombre }} - {{ ubicacion.get_tipo_display }}</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="text-white">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ ubicacion.get_productos_count }}</div>
+                                <small>Actuales</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 mb-0" id="productosSeleccionados">0</div>
+                                <small>Seleccionados</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 mb-0">
+                                    {% if ubicacion.capacidad_maxima %}
+                                        {{ ubicacion.capacidad_maxima }}
+                                    {% else %}
+                                        ∞
+                                    {% endif %}
+                                </div>
+                                <small>Capacidad</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alerta de Capacidad -->
+        {% if ubicacion.capacidad_maxima %}
+        <div id="alertaCapacidad" class="alert alert-info mb-0" style="display: none;">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-2"></i>
+                <div class="flex-grow-1">
+                    <strong>Capacidad:</strong> 
+                    <span id="capacidadUsada">{{ ubicacion.get_capacidad_usada }}</span>/<span id="capacidadTotal">{{ ubicacion.capacidad_maxima }}</span>
+                    (<span id="porcentajeCapacidad">{{ ubicacion.get_porcentaje_ocupacion }}</span>%)
+                </div>
+                <div class="progress ms-3" style="width: 200px; height: 8px;">
+                    <div id="barraCapacidad" class="progress-bar bg-info" style="width: {{ ubicacion.get_porcentaje_ocupacion }}%"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Panel Principal -->
+        <div class="col-lg-8">
+            <!-- Filtros Avanzados -->
+            <div class="filtros-avanzados">
+                <h6 class="mb-3"><i class="fas fa-filter me-2"></i>Filtros de Productos</h6>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Categoría</label>
+                        <select id="filtroCategoria" class="form-select form-select-sm">
+                            <option value="">Todas las categorías</option>
+                            {% for categoria in categorias %}
+                                <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Stock</label>
+                        <select id="filtroStock" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option value="con_stock">Con stock</option>
+                            <option value="sin_stock">Sin stock</option>
+                            <option value="stock_bajo">Stock bajo</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Estado</label>
+                        <select id="filtroEstado" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option value="sin_ubicacion">Sin ubicación</option>
+                            <option value="con_ubicacion">Ya ubicados</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Buscar</label>
+                        <input type="text" id="buscarProducto" class="form-control form-control-sm" placeholder="Código o nombre...">
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary" onclick="limpiarFiltros()">
+                                <i class="fas fa-eraser me-1"></i>Limpiar
+                            </button>
+                            <button type="button" class="btn btn-outline-success" onclick="seleccionarSinUbicacion()">
+                                <i class="fas fa-map-marker-alt me-1"></i>Solo sin ubicación
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="seleccionarConStock()">
+                                <i class="fas fa-boxes me-1"></i>Solo con stock
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div class="drag-drop-zone" id="dragDropZone">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Arrastra productos aquí para asignar</h5>
+                <p class="text-muted mb-0">O haz clic en los productos para seleccionarlos</p>
+            </div>
+
+            <!-- Selección Masiva -->
+            <div class="seleccion-masiva">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="seleccionarTodos">
+                            <label class="form-check-label" for="seleccionarTodos">
+                                Seleccionar todos visibles
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary me-2" id="contadorSeleccionados">0 seleccionados</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="limpiarSeleccion()">
+                            <i class="fas fa-times me-1"></i>Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Productos -->
+            <div class="productos-container">
+                <div class="row" id="productosGrid">
+                    
+                    {% for item in productos_con_estado %}
+                        <div class="col-md-6 col-lg-4 mb-3 producto-item" 
+                            data-producto-id="{{ item.producto.id }}"
+                            data-categoria="{{ item.producto.categoria.id }}"
+                            data-stock="{{ item.stock_total }}"
+                            data-ya-asignado="{% if item.ya_asignado %}true{% else %}false{% endif %}">
+                            
+                            <div class="card producto-card h-100 
+                                {% if item.stock_total == 0 %}sin-stock
+                                {% elif item.ya_asignado %}ya-asignado{% endif %}"
+                                data-producto-id="{{ item.producto.id }}">
+                                
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="flex-grow-1">
+                                            <h6 class="card-title mb-1">{{ item.producto.nombre|truncatechars:30 }}</h6>
+                                            <small class="text-muted">{{ item.producto.codigo }}</small>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input producto-checkbox" type="checkbox" 
+                                                id="check-{{ item.producto.id }}" data-producto-id="{{ item.producto.id }}">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row text-center small mb-2">
+                                        <div class="col-4">
+                                            <div class="text-muted">Stock</div>
+                                            <div class="fw-bold 
+                                                {% if item.stock_total == 0 %}text-danger
+                                                {% elif item.stock_total <= item.producto.stock_minimo %}text-warning
+                                                {% else %}text-success{% endif %}">
+                                                {{ item.stock_total }}
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="text-muted">Mín.</div>
+                                            <div class="fw-bold">{{ item.producto.stock_minimo }}</div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="text-muted">Categoría</div>
+                                            <div class="fw-bold">{{ item.producto.categoria.nombre|truncatechars:8 }}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if item.ya_asignado %}
+                                        <div class="alert alert-warning p-2 mb-2">
+                                            <small><i class="fas fa-exclamation-triangle me-1"></i>Ya asignado aquí</small>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Resto del contenido de la card -->
+                                    <div class="cantidad-asignar" style="display: none;">
+                                        <label class="form-label small">Cantidad a asignar:</label>
+                                        <input type="number" class="form-control form-control-sm cantidad-input" 
+                                            min="0" max="{{ item.stock_total }}" value="1" 
+                                            data-producto-id="{{ item.producto.id }}">
+                                    </div>
+                                </div>
+                                
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            {% if item.ya_asignado %}
+                                                <i class="fas fa-map-marker-alt text-warning me-1"></i>Ubicado aquí
+                                            {% else %}
+                                                <i class="fas fa-map-marker-alt text-muted me-1"></i>Sin ubicar
+                                            {% endif %}
+                                        </small>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="verProducto({{ item.producto.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                </div>
+                
+                <!-- Estado vacío -->
+                <div id="estadoVacio" class="text-center py-5" style="display: none;">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No se encontraron productos</h5>
+                    <p class="text-muted">Intenta ajustar los filtros de búsqueda</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral - Resumen -->
+        <div class="col-lg-4">
+            <div class="resumen-asignacion">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-clipboard-list me-2"></i>
+                            Resumen de Asignación
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Estado de la ubicación -->
+                        <div class="mb-3">
+                            <h6>Ubicación: {{ ubicacion.codigo }}</h6>
+                            <div class="small text-muted mb-2">
+                                <div>Tipo: {{ ubicacion.get_tipo_display }}</div>
+                                <div>Productos actuales: {{ ubicacion.get_productos_count }}</div>
+                                {% if ubicacion.capacidad_maxima %}
+                                    <div>Capacidad: {{ ubicacion.capacidad_maxima }}</div>
+                                {% else %}
+                                    <div>Capacidad: Ilimitada</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Productos seleccionados -->
+                        <div class="mb-3">
+                            <h6>Productos Seleccionados <span class="badge bg-primary" id="cantidadSeleccionados">0</span></h6>
+                            <div id="listaSeleccionados" class="mb-3">
+                                <div class="text-muted text-center py-3">
+                                    <i class="fas fa-box-open fa-2x mb-2"></i>
+                                    <p class="mb-0">No hay productos seleccionados</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Botones de acción -->
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" id="btnAsignar" disabled onclick="procesarAsignacion()">
+                                <i class="fas fa-check me-1"></i>
+                                Asignar Productos (<span id="totalAsignar">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="previewAsignacion()">
+                                <i class="fas fa-eye me-1"></i>
+                                Vista Previa
+                            </button>
+                        </div>
+                        
+                        <!-- Estadísticas -->
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="row text-center small">
+                                <div class="col-6">
+                                    <div class="text-muted">Total Items</div>
+                                    <div class="fw-bold" id="totalItems">0</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted">Capacidad Final</div>
+                                    <div class="fw-bold" id="capacidadFinal">{{ ubicacion.get_productos_count }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Acciones Rápidas -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="asignarPorCategoria()">
+                            <i class="fas fa-tags me-1"></i>
+                            Asignar por Categoría
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="asignarStockBajo()">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Asignar Stock Bajo
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="redistribuirProductos()">
+                            <i class="fas fa-exchange-alt me-1"></i>
+                            Redistribuir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Vista Previa -->
+<div class="modal fade" id="modalPreview" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vista Previa de Asignación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>Ubicación: {{ ubicacion.codigo }} - {{ ubicacion.nombre }}</h6>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Código</th>
+                                <th>Stock Actual</th>
+                                <th>Cantidad a Asignar</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPreview">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3 p-3 bg-light rounded">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="h6 mb-0" id="previewTotalProductos">0</div>
+                            <small class="text-muted">Productos</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h6 mb-0" id="previewTotalItems">0</div>
+                            <small class="text-muted">Total Items</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h6 mb-0" id="previewCapacidadFinal">0</div>
+                            <small class="text-muted">Capacidad Final</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarAsignacion()">
+                    <i class="fas fa-check me-1"></i>Confirmar Asignación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmación de Asignación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>¿Confirmar asignación?</strong>
+                </div>
+                <p>Se asignarán <strong id="confirmarCantidad">0</strong> productos a la ubicación <strong>{{ ubicacion.codigo }}</strong>.</p>
+                <div id="alertasConfirmacion"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarFinal">
+                    <i class="fas fa-save me-1"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let productosSeleccionados = new Set();
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    
+    // Configurar todas las cards de productos
+    const cards = document.querySelectorAll('.producto-card');
+    
+    
+    cards.forEach((card, index) => {
+        const productItem = card.closest('.producto-item');
+        const productoId = productItem ? productItem.getAttribute('data-producto-id') : null;
+       
+        
+        if (!productoId || isNaN(productoId)) {
+            console.warn(`❌ Card ${index} tiene ID inválido:`, productoId);
+            return;
+        }
+        
+        // Agregar event listener al card
+        card.addEventListener('click', function(e) {
+            // Evitar trigger doble si se hace click en el checkbox o botones
+            if (e.target.type === 'checkbox' || e.target.closest('button')) return;
+            
+            const id = parseInt(productItem.getAttribute('data-producto-id'));
+            
+            
+            if (isNaN(id)) {
+                console.error('ID inválido en click:', id);
+                return;
+            }
+            
+            toggleProductoSelection(id, this);
+        });
+        
+        // También configurar el checkbox
+        const checkbox = card.querySelector('.producto-checkbox');
+        if (checkbox) {
+            checkbox.addEventListener('change', function(e) {
+                e.stopPropagation(); // Evitar que dispare el click del card
+                const id = parseInt(productItem.getAttribute('data-producto-id'));
+                toggleProductoSelection(id, card, this.checked);
+            });
+        }
+    });
+    
+    // Configurar otros elementos
+    setupOtherElements();
+});
+
+function toggleProductoSelection(productoId, cardElement, forceState = null) {
+    
+    
+    if (isNaN(productoId)) {
+        console.error('❌ ID inválido en toggle:', productoId);
+        return;
+    }
+    
+    const checkbox = cardElement.querySelector('.producto-checkbox');
+    
+    // Determinar el nuevo estado
+    let isSelected;
+    if (forceState !== null) {
+        isSelected = forceState;
+    } else {
+        isSelected = !productosSeleccionados.has(productoId);
+    }
+    
+    // Actualizar checkbox
+    if (checkbox) {
+        checkbox.checked = isSelected;
+    }
+    
+    // Actualizar selección
+    if (isSelected) {
+        productosSeleccionados.add(productoId);
+        cardElement.classList.add('selected');
+        
+    } else {
+        productosSeleccionados.delete(productoId);
+        cardElement.classList.remove('selected');
+       
+    }
+    
+    updateSelectionCounter();
+}
+
+function setupOtherElements() {
+    // Configurar "Seleccionar todos"
+    const selectAllCheckbox = document.getElementById('seleccionarTodos');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.producto-checkbox:not([disabled])');
+            checkboxes.forEach(checkbox => {
+                const productItem = checkbox.closest('.producto-item');
+                const productoId = parseInt(productItem.getAttribute('data-producto-id'));
+                const card = checkbox.closest('.producto-card');
+                toggleProductoSelection(productoId, card, this.checked);
+            });
+        });
+    }
+}
+
+function updateSelectionCounter() {
+    const count = productosSeleccionados.size;
+   
+    
+    // Actualizar elementos de UI
+    const elementos = ['productosSeleccionados', 'cantidadSeleccionados', 'totalAsignar'];
+    elementos.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.textContent = count;
+        }
+    });
+    
+    // Actualizar contador con texto
+    const contadorTexto = document.getElementById('contadorSeleccionados');
+    if (contadorTexto) {
+        contadorTexto.textContent = `${count} seleccionados`;
+    }
+    
+    // Mostrar/ocultar controles
+    const btnAsignar = document.getElementById('btnAsignar');
+    if (btnAsignar) {
+        btnAsignar.disabled = count === 0;
+    }
+    
+    updateListaSeleccionados();
+}
+
+function updateListaSeleccionados() {
+    const lista = document.getElementById('listaSeleccionados');
+    
+    if (productosSeleccionados.size === 0) {
+        lista.innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="fas fa-box-open fa-2x mb-2"></i>
+                <p class="mb-0">No hay productos seleccionados</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    productosSeleccionados.forEach(productoId => {
+        const productItem = document.querySelector(`[data-producto-id="${productoId}"]`);
+        if (productItem) {
+            const card = productItem.querySelector('.producto-card');
+            const nombre = card.querySelector('.card-title').textContent;
+            const codigo = card.querySelector('.text-muted').textContent;
+            
+            html += `
+                <div class="producto-seleccionado">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${nombre}</strong><br>
+                            <small class="text-muted">${codigo}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success">1</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="removerSeleccionado(${productoId})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    lista.innerHTML = html;
+}
+
+function removerSeleccionado(productoId) {
+    const productItem = document.querySelector(`[data-producto-id="${productoId}"]`);
+    if (productItem) {
+        const card = productItem.querySelector('.producto-card');
+        toggleProductoSelection(productoId, card, false);
+    }
+}
+
+function procesarAsignacion() {
+   
+    
+    if (productosSeleccionados.size === 0) {
+        alert('No hay productos seleccionados para asignar.');
+        return;
+    }
+    
+    // Verificar que todos los IDs sean válidos
+    const productosArray = Array.from(productosSeleccionados);
+    const productosValidos = productosArray.filter(id => !isNaN(id) && id > 0);
+    
+    
+    if (productosValidos.length === 0) {
+        alert('Error: No hay productos válidos seleccionados');
+        return;
+    }
+    
+    const productos = productosValidos.map(productoId => ({
+        producto_id: parseInt(productoId),
+        cantidad: 1
+    }));
+    
+
+    
+    const mensaje = `¿Confirmar asignación de ${productos.length} productos?\n\nIDs: ${productos.map(p => p.producto_id).join(', ')}`;
+    
+    if (confirm(mensaje)) {
+        enviarAsignacion(productos);
+    }
+}
+
+function enviarAsignacion(productos) {
+
+    
+    // Obtener token CSRF
+    let csrfToken = null;
+    
+    // Método 1: Meta tag
+    const metaToken = document.querySelector('meta[name="csrf-token"]');
+    if (metaToken) {
+        csrfToken = metaToken.getAttribute('content');
+    }
+    
+    // Método 2: Input hidden
+    if (!csrfToken) {
+        const inputToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (inputToken) {
+            csrfToken = inputToken.value;
+        }
+    }
+    
+    // Método 3: Cookies
+    if (!csrfToken) {
+        csrfToken = getCookie('csrftoken');
+    }
+    
+    if (!csrfToken) {
+        alert('Error: Token CSRF no encontrado');
+        return;
+    }
+    
+
+    
+    // ENVÍO REAL AL SERVIDOR
+    fetch('{% url "asignar_ubicacion" sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({
+            productos: productos
+        })
+    })
+    .then(response => {
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+
+        
+        if (data.success) {
+            alert(`¡Éxito! ${data.asignados} productos asignados correctamente a la ubicación.`);
+            
+            // Limpiar selección
+            limpiarSeleccion();
+            
+            // Opcional: Redirigir al detalle de la ubicación
+            if (confirm('¿Desea ver el detalle de la ubicación actualizada?')) {
+                window.location.href = "{% url 'detalle_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}";
+            }
+        } else {
+            alert('Error al asignar productos: ' + (data.error || 'Error desconocido'));
+        }
+    })
+    .catch(error => {
+        console.error('Error en la petición:', error);
+        alert('Error de conexión: ' + error.message);
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Funciones auxiliares para los botones
+function limpiarSeleccion() {
+    productosSeleccionados.clear();
+    
+    document.querySelectorAll('.producto-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    document.querySelectorAll('.producto-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    document.getElementById('seleccionarTodos').checked = false;
+    updateSelectionCounter();
+}
+
+function previewAsignacion() {
+    if (productosSeleccionados.size === 0) {
+        alert('No hay productos seleccionados para previsualizar.');
+        return;
+    }
+    
+    // Implementar preview modal si necesario
+    const productos = Array.from(productosSeleccionados);
+    alert(`Vista previa: Se asignarán ${productos.length} productos (IDs: ${productos.join(', ')})`);
+}
+
+function verProducto(productoId) {
+
+    // window.location.href = `/productos/${productoId}/`;
+}
+
+// Funciones para filtros (implementar si necesario)
+function limpiarFiltros() {
+    document.getElementById('filtroCategoria').value = '';
+    document.getElementById('filtroStock').value = '';
+    document.getElementById('filtroEstado').value = '';
+    document.getElementById('buscarProducto').value = '';
+}
+
+function seleccionarSinUbicacion() {
+    document.getElementById('filtroEstado').value = 'sin_ubicacion';
+}
+
+function seleccionarConStock() {
+    document.getElementById('filtroStock').value = 'con_stock';
+}
+
+function asignarPorCategoria() {
+    alert('Función disponible próximamente');
+}
+
+function asignarStockBajo() {
+    alert('Función disponible próximamente');
+}
+
+function redistribuirProductos() {
+    alert('Función disponible próximamente');
+}
+</script>
+{% endblock %}

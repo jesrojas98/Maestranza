@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <select class="form-select" onchange="cambiarSucursal(this.value)">
+        <option value="">Todas las sucursales</option>
+        {% for sucursal in sucursales %}
+            <option value="{{ sucursal.id }}" {% if sucursal == sucursal_actual %}selected{% endif %}>
+                {{ sucursal.nombre }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Estadísticas principales -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Productos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_productos }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-box text-primary" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Stock Bajo
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ productos_stock_bajo }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Alertas Activas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ alertas_stock }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-bell text-info" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-stats border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Por Vencer
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ productos_vencer }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-x text-danger" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Movimientos Recientes -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-clock-history"></i> Movimientos Recientes
+                </h6>
+                <a href="{% url 'lista_movimientos' %}" class="btn btn-sm btn-outline-primary">
+                    Ver todos
+                </a>
+            </div>
+            <div class="card-body">
+                {% if movimientos_recientes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movimiento in movimientos_recientes %}
+                                <tr>
+                                    <td>{{ movimiento.fecha|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'detalle_producto' movimiento.producto.id %}" 
+                                           class="text-decoration-none">
+                                            {{ movimiento.producto.nombre }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                        {% if movimiento.tipo == 'entrada' %}bg-success
+                                        {% elif movimiento.tipo == 'salida' %}bg-danger
+                                        {% elif movimiento.tipo == 'transferencia' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ movimiento.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' %}-{% endif %}{{ movimiento.cantidad }}
+                                    </td>
+                                    <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No hay movimientos recientes</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas Críticas -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-exclamation-triangle"></i> Alertas Críticas
+                </h6>
+                <a href="{% url 'alertas_stock' %}" class="btn btn-sm btn-outline-primary">
+                    Ver todas
+                </a>
+            </div>
+            <div class="card-body">
+                {% if alertas_stock > 0 %}
+                    <div class="alert alert-warning" role="alert">
+                        <strong>¡Atención!</strong> Hay {{ alertas_stock }} alerta{% if alertas_stock > 1 %}s{% endif %} que requieren tu atención.
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'alertas_stock' %}?tipo=stock_bajo" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-box"></i> Ver Stock Bajo
+                        </a>
+                        <a href="{% url 'alertas_stock' %}?tipo=vencimiento" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-calendar-x"></i> Ver Próximos Vencimientos
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">¡Todo bajo control!</p>
+                        <p class="small text-muted">No hay alertas críticas</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Acciones Rápidas -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-lightning"></i> Acciones Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'crear_producto' %}" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle"></i><br>
+                            Nuevo Producto
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'lista_productos' %}" class="btn btn-success w-100">
+                            <i class="bi bi-arrow-up-circle"></i><br>
+                            Entrada Inventario
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'crear_proveedor' %}" class="btn btn-info w-100">
+                            <i class="bi bi-truck"></i><br>
+                            Nuevo Proveedor
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'reportes' %}" class="btn btn-warning w-100">
+                            <i class="bi bi-graph-up"></i><br>
+                            Generar Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function cambiarSucursal(sucursalId) {
+    const url = new URL(window.location);
+    if (sucursalId) {
+        url.searchParams.set('sucursal', sucursalId);
+    } else {
+        url.searchParams.delete('sucursal');
+    }
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

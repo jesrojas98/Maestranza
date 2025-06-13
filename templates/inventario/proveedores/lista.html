@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Proveedores - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Proveedores{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'crear_proveedor' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Nuevo Proveedor
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros de búsqueda -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-6">
+                <label for="q" class="form-label">Buscar</label>
+                <input type="text" class="form-control" id="q" name="q" 
+                       value="{{ busqueda }}" placeholder="Nombre del proveedor o contacto...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <a href="{% url 'lista_proveedores' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de proveedores -->
+<div class="card">
+    <div class="card-body">
+        {% if proveedores %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Proveedor</th>
+                            <th>Contacto</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Estado</th>
+                            <th>Registrado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proveedor in proveedores %}
+                        <tr>
+                            <td>
+                                <div>
+                                    <strong>{{ proveedor.nombre }}</strong>
+                                    {% if proveedor.direccion %}
+                                        <small class="text-muted d-block">{{ proveedor.direccion|truncatechars:50 }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if proveedor.contacto %}
+                                    {{ proveedor.contacto }}
+                                {% else %}
+                                    <span class="text-muted">No especificado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if proveedor.telefono %}
+                                    <a href="tel:{{ proveedor.telefono }}" class="text-decoration-none">
+                                        <i class="bi bi-telephone"></i> {{ proveedor.telefono }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if proveedor.email %}
+                                    <a href="mailto:{{ proveedor.email }}" class="text-decoration-none">
+                                        <i class="bi bi-envelope"></i> {{ proveedor.email|truncatechars:25 }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if proveedor.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ proveedor.created_at|date:"d/m/Y" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'lista_productos' %}?proveedor={{ proveedor.id }}" class="btn btn-outline-primary" title="Ver productos">
+    <i class="bi bi-box"></i>
+</a>
+                                    <a href="#" class="btn btn-outline-secondary" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-info" title="Historial de compras">
+                                        <i class="bi bi-clock-history"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if proveedores.has_other_pages %}
+                <nav aria-label="Paginación">
+                    <ul class="pagination justify-content-center">
+                        {% if proveedores.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if busqueda %}&q={{ busqueda }}{% endif %}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ proveedores.previous_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Página {{ proveedores.number }} de {{ proveedores.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if proveedores.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ proveedores.next_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ proveedores.paginator.num_pages }}{% if busqueda %}&q={{ busqueda }}{% endif %}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-truck text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No se encontraron proveedores</h4>
+                <p class="text-muted">
+                    {% if busqueda %}
+                        No hay proveedores que coincidan con "{{ busqueda }}".
+                    {% else %}
+                        Aún no has registrado proveedores en el sistema.
+                    {% endif %}
+                </p>
+                <a href="{% url 'crear_proveedor' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Crear primer proveedor
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estadísticas -->
+{% if proveedores %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h5 class="text-primary">{{ total_proveedores }}</h5>
+                        <small class="text-muted">Total Proveedores</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="text-success">{{ proveedores_activos }}</h5>
+                        <small class="text-muted">Proveedores Activos</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="text-info">{{ proveedores_con_email }}</h5>
+                        <small class="text-muted">Con Email</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="text-warning">{{ proveedores_con_telefono }}</h5>
+                        <small class="text-muted">Con Teléfono</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

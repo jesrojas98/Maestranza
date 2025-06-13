@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Movimiento - {{ producto.nombre }}{% endblock %}
+
+{% block page_title %}Registrar Movimiento de Inventario{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'detalle_producto' producto.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver al Producto
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-left-right"></i> Nuevo Movimiento
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>Producto:</strong> {{ producto.nombre }}<br>
+                            <strong>Código:</strong> <code>{{ producto.codigo }}</code>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <strong>Stock Total:</strong> {{ producto.get_stock_total }} {{ producto.unidad_medida }}
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" id="movimientoForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.sucursal.id_for_label }}" class="form-label">
+                                    <i class="bi bi-building"></i> Sucursal *
+                                </label>
+                                {{ form.sucursal }}
+                                {% if form.sucursal.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.sucursal.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div id="stock-actual" class="form-text"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                                    <i class="bi bi-arrow-repeat"></i> Tipo de Movimiento *
+                                </label>
+                                {{ form.tipo }}
+                                {% if form.tipo.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.tipo.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.cantidad.id_for_label }}" class="form-label">
+                                    <i class="bi bi-123"></i> Cantidad *
+                                </label>
+                                {{ form.cantidad }}
+                                {% if form.cantidad.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.cantidad.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">En {{ producto.unidad_medida }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6" id="sucursal-destino-field" style="display: none;">
+                            <div class="mb-3">
+                                <label for="{{ form.sucursal_destino.id_for_label }}" class="form-label">
+                                    <i class="bi bi-arrow-right"></i> Sucursal Destino *
+                                </label>
+                                {{ form.sucursal_destino }}
+                                {% if form.sucursal_destino.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.sucursal_destino.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.motivo.id_for_label }}" class="form-label">
+                            <i class="bi bi-chat-left-text"></i> Motivo
+                        </label>
+                        {{ form.motivo }}
+                        {% if form.motivo.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.motivo.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Descripción del motivo del movimiento</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.numero_documento.id_for_label }}" class="form-label">
+                            <i class="bi bi-file-earmark-text"></i> Número de Documento
+                        </label>
+                        {{ form.numero_documento }}
+                        {% if form.numero_documento.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.numero_documento.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Factura, orden de compra, etc.</div>
+                    </div>
+
+                    <!-- Errores no específicos de campo -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Registrar Movimiento
+                        </button>
+                        <a href="{% url 'detalle_producto' producto.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Tipos de Movimiento
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-success me-2">Entrada</span>
+                        <small>Suma stock al inventario</small>
+                    </div>
+                    <small class="text-muted">Compras, devoluciones de clientes, etc.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-danger me-2">Salida</span>
+                        <small>Resta stock del inventario</small>
+                    </div>
+                    <small class="text-muted">Ventas, devoluciones a proveedores, etc.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-info me-2">Transferencia</span>
+                        <small>Mueve stock entre sucursales</small>
+                    </div>
+                    <small class="text-muted">Requiere sucursal destino</small>
+                </div>
+                
+                <div class="mb-0">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-secondary me-2">Ajuste</span>
+                        <small>Corrección de inventario</small>
+                    </div>
+                    <small class="text-muted">Establece una cantidad exacta</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-building"></i> Stock por Sucursal
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for inventario in producto.inventario_set.all %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>{{ inventario.sucursal.nombre }}</strong>
+                        {% if inventario.ubicacion %}
+                            <br><small class="text-muted">{{ inventario.ubicacion }}</small>
+                        {% endif %}
+                    </div>
+                    <span class="badge {% if inventario.necesita_reposicion %}bg-danger{% else %}bg-success{% endif %}">
+                        {{ inventario.cantidad }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mostrar/ocultar campo sucursal destino según tipo
+document.getElementById('{{ form.tipo.id_for_label }}').addEventListener('change', function() {
+    const tipoMovimiento = this.value;
+    const sucursalDestinoField = document.getElementById('sucursal-destino-field');
+    
+    if (tipoMovimiento === 'transferencia') {
+        sucursalDestinoField.style.display = 'block';
+        document.getElementById('{{ form.sucursal_destino.id_for_label }}').required = true;
+    } else {
+        sucursalDestinoField.style.display = 'none';
+        document.getElementById('{{ form.sucursal_destino.id_for_label }}').required = false;
+    }
+});
+
+// Mostrar stock actual al seleccionar sucursal
+document.getElementById('{{ form.sucursal.id_for_label }}').addEventListener('change', function() {
+    const sucursalId = this.value;
+    const stockDiv = document.getElementById('stock-actual');
+    
+    if (sucursalId) {
+        // Aquí podrías hacer una llamada AJAX para obtener el stock actual
+        // Por ahora mostramos un mensaje genérico
+        stockDiv.innerHTML = '<i class="bi bi-info-circle"></i> Selecciona el tipo de movimiento';
+    } else {
+        stockDiv.innerHTML = '';
+    }
+});
+
+// Validaciones del formulario
+document.getElementById('movimientoForm').addEventListener('submit', function(e) {
+    const tipo = document.getElementById('{{ form.tipo.id_for_label }}').value;
+    const cantidad = parseInt(document.getElementById('{{ form.cantidad.id_for_label }}').value);
+    
+    if (!tipo) {
+        e.preventDefault();
+        alert('Debe seleccionar un tipo de movimiento');
+        return;
+    }
+    
+    if (!cantidad || cantidad <= 0) {
+        e.preventDefault();
+        alert('La cantidad debe ser mayor a cero');
+        return;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+
+{% block title %}Productos - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Productos{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center">
+    <!-- Toggle de Vista -->
+    <div class="btn-group" role="group" aria-label="Vista de productos">
+        <button type="button" class="btn btn-outline-secondary active" id="cardView" onclick="toggleView('cards')">
+            <i class="bi bi-grid-3x3-gap"></i>
+        </button>
+    </div>
+    <a href="{% url 'crear_producto' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nuevo Producto
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.producto-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+    height: 100%;
+}
+
+.producto-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+/* ✅ IMAGEN PRINCIPAL EN CARDS - SIN CORTES */
+.producto-imagen {
+    width: 100%;
+    height: 200px;
+    object-fit: contain; /* ✅ Cambiado de 'cover' a 'contain' */
+    object-position: center;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px; /* Añade un poco de espacio alrededor */
+}
+
+.producto-placeholder {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #dee2e6;
+    color: #6c757d;
+}
+
+.stock-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.categoria-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+}
+
+.producto-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #495057;
+}
+
+/* ✅ IMAGEN PEQUEÑA EN TABLA - SIN CORTES */
+.table-view .producto-imagen-small {
+    width: 50px;
+    height: 50px;
+    object-fit: contain; /* ✅ Cambiado de 'cover' a 'contain' */
+    object-position: center;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 3px; /* Añade espacio alrededor */
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    transition: transform 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+}
+
+/* ✅ CONTENEDOR MEJORADO PARA IMÁGENES EN CARDS */
+.imagen-container-card {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    position: relative;
+    overflow: hidden;
+}
+
+.imagen-container-card img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    object-position: center;
+}
+
+/* ✅ CONTENEDOR PARA IMÁGENES PEQUEÑAS EN TABLA */
+.imagen-container-small {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+}
+
+.imagen-container-small img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Estadísticas Rápidas -->
+{% if productos.paginator.count > 0 %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="stats-card p-3 text-center">
+            <div class="h4 mb-1 text-primary">{{ productos.paginator.count }}</div>
+            <div class="small text-muted">Total Productos</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card p-3 text-center">
+            <div class="h4 mb-1 text-success">{{ productos_activos|default:productos.paginator.count }}</div>
+            <div class="small text-muted">Productos Activos</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card p-3 text-center">
+            <div class="h4 mb-1 text-info">{{ categorias|length }}</div>
+            <div class="small text-muted">Categorías</div>
+        </div>
+    </div>
+
+</div>
+{% endif %}
+
+<!-- Filtros de búsqueda -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3" id="filtrosForm">
+            <div class="col-md-4">
+                <label for="q" class="form-label">
+                    <i class="bi bi-search"></i> Buscar
+                </label>
+                <input type="text" class="form-control" id="q" name="q" 
+                       value="{{ busqueda }}" placeholder="Código, nombre o descripción...">
+            </div>
+            <div class="col-md-3">
+                <label for="categoria" class="form-label">
+                    <i class="bi bi-tags"></i> Categoría
+                </label>
+                <select class="form-select" id="categoria" name="categoria">
+                    <option value="">Todas las categorías</option>
+                    {% for categoria in categorias %}
+                        <option value="{{ categoria.id }}" 
+                                {% if categoria.id == categoria_seleccionada|add:0 %}selected{% endif %}>
+                            {{ categoria.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="estado" class="form-label">
+                    <i class="bi bi-toggle-on"></i> Estado
+                </label>
+                <select class="form-select" id="estado" name="estado">
+                    <option value="">Todos</option>
+                    <option value="activo" {% if estado == 'activo' %}selected{% endif %}>Activos</option>
+                    <option value="inactivo" {% if estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <a href="{% url 'lista_productos' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if productos %}
+    <!-- Vista de Cards (por defecto) -->
+    <div id="cardsContainer">
+        <div class="row" id="productosGrid">
+            {% for producto in productos %}
+                <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                    <div class="card producto-card d-flex flex-column h-100">
+                        <div class="position-relative">
+                            <!-- Imagen del producto -->
+                            {% if producto.imagen %}
+                                <img src="{{ producto.imagen.url }}" 
+                                    class="producto-imagen" 
+                                    alt="{{ producto.nombre }}"
+                                    loading="lazy">
+                            {% else %}
+                                <div class="producto-placeholder">
+                                    <div class="text-center">
+                                        <i class="bi bi-image display-4 mb-2"></i>
+                                        <p class="mb-0 small">Sin imagen</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+
+                            <!-- Badges -->
+                            <span class="categoria-badge">
+                                {% if producto.categoria %}
+                                    <span class="badge" style="background-color: {{ producto.categoria.color }};">
+                                        {{ producto.categoria.nombre }}
+                                    </span>
+                                {% endif %}
+                            </span>
+
+                            {% if not producto.activo %}
+                                <span class="stock-badge">
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-body d-flex flex-column">
+                            <!-- Código y nombre -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="producto-code">{{ producto.codigo }}</span>
+                                {% if not producto.activo %}
+                                    <i class="bi bi-ban text-muted" title="Producto inactivo"></i>
+                                {% endif %}
+                            </div>
+
+                            <h6 class="card-title mb-2">
+                                <a href="{% url 'detalle_producto' producto.id %}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ producto.nombre|truncatechars:40 }}
+                                </a>
+                            </h6>
+
+                            <!-- Descripción -->
+                            {% if producto.descripcion %}
+                                <p class="card-text text-muted small mb-2">
+                                    {{ producto.descripcion|truncatechars:60 }}
+                                </p>
+                            {% endif %}
+
+                            <!-- Información técnica -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">Stock Mínimo:</small>
+                                    <span class="badge bg-warning">
+                                        {{ producto.stock_minimo }} {{ producto.unidad_medida }}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">Precio:</small>
+                                    {% if producto.precio %}
+                                        <span class="fw-bold text-success">${{ producto.precio }}</span>
+                                    {% else %}
+                                        <small class="text-muted">Sin precio</small>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">Unidad:</small>
+                                    <small class="fw-bold">{{ producto.unidad_medida }}</small>
+                                </div>
+                            </div>
+
+                            <!-- Acciones -->
+                            <div class="mt-auto d-flex gap-1">
+                                <a href="{% url 'detalle_producto' producto.id %}" 
+                                   class="btn btn-sm btn-outline-primary flex-fill">
+                                    <i class="bi bi-eye"></i> Ver
+                                </a>
+                                <a href="{% url 'editar_producto' producto.id %}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Vista de Tabla (oculta por defecto) -->
+    <div id="tableContainer" class="d-none">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="80">Imagen</th>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Stock Mínimo</th>
+                                <th>Precio</th>
+                                <th>Unidad</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos %}
+                            <tr>
+                                <td>
+                                    {% if producto.imagen %}
+                                        <img src="{{ producto.imagen.url }}" 
+                                            class="producto-imagen-small" 
+                                            alt="{{ producto.nombre }}">
+                                    {% else %}
+                                        <div class="producto-imagen-small bg-light d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <code>{{ producto.codigo }}</code>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>
+                                            <a href="{% url 'detalle_producto' producto.id %}" 
+                                               class="text-decoration-none">
+                                                {{ producto.nombre }}
+                                            </a>
+                                        </strong>
+                                        {% if producto.descripcion %}
+                                            <small class="text-muted d-block">{{ producto.descripcion|truncatechars:50 }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if producto.categoria %}
+                                        <span class="badge" style="background-color: {{ producto.categoria.color }}">
+                                            {{ producto.categoria.nombre }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">Sin categoría</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ producto.stock_minimo }}</td>
+                                <td>
+                                    {% if producto.precio %}
+                                        <span class="text-success fw-bold">${{ producto.precio }}</span>
+                                    {% else %}
+                                        <span class="text-muted small">Sin precio</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ producto.unidad_medida }}</td>
+                                <td>
+                                    {% if producto.activo %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'detalle_producto' producto.id %}" 
+                                           class="btn btn-outline-primary" title="Ver detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'editar_producto' producto.id %}" class="btn btn-outline-primary">
+                                            <i class="bi bi-pencil"></i> Editar
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paginación -->
+    {% if productos.has_other_pages %}
+        <nav aria-label="Paginación" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if productos.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if estado %}&estado={{ estado }}{% endif %}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ productos.previous_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if estado %}&estado={{ estado }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ productos.number }} de {{ productos.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if productos.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ productos.next_page_number }}{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if estado %}&estado={{ estado }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ productos.paginator.num_pages }}{% if busqueda %}&q={{ busqueda }}{% endif %}{% if categoria_seleccionada %}&categoria={{ categoria_seleccionada }}{% endif %}{% if estado %}&estado={{ estado }}{% endif %}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+
+{% else %}
+    <!-- Mensaje cuando no hay productos (mantenido original) -->
+    <div class="card">
+        <div class="card-body">
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No se encontraron productos</h4>
+                <p class="text-muted">
+                    {% if busqueda or categoria_seleccionada %}
+                        No hay productos que coincidan con los filtros aplicados.
+                    {% else %}
+                        Aún no has registrado productos en el sistema.
+                    {% endif %}
+                </p>
+                <a href="{% url 'crear_producto' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Crear primer producto
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Información adicional -->
+{% if productos %}
+<div class="row mt-4">
+    <div class="col-12">
+        <small class="text-muted">
+            <i class="bi bi-info-circle"></i>
+            Mostrando {{ productos|length }} de {{ productos.paginator.count }} producto{{ productos.paginator.count|pluralize }} total{{ productos.paginator.count|pluralize:"es" }}
+        </small>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(viewType) {
+    const cardsContainer = document.getElementById('cardsContainer');
+    const tableContainer = document.getElementById('tableContainer');
+    const cardViewBtn = document.getElementById('cardView');
+    const tableViewBtn = document.getElementById('tableView');
+
+    if (viewType === 'cards') {
+        cardsContainer.classList.remove('d-none');
+        tableContainer.classList.add('d-none');
+        cardViewBtn.classList.add('active');
+        tableViewBtn.classList.remove('active');
+    } else {
+        cardsContainer.classList.add('d-none');
+        tableContainer.classList.remove('d-none');
+        cardViewBtn.classList.remove('active');
+        tableViewBtn.classList.add('active');
+    }
+
+    // Guardar preferencia en localStorage
+    localStorage.setItem('productos_view', viewType);
+}
+
+// Restaurar vista guardada y funcionalidad de filtros
+document.addEventListener('DOMContentLoaded', function() {
+    // Restaurar vista
+    const savedView = localStorage.getItem('productos_view');
+    if (savedView && savedView === 'table') {
+        toggleView('table');
+    }
+
+    // Auto-submit en cambio de filtros (funcionalidad existente mejorada)
+    const filtrosForm = document.getElementById('filtrosForm');
+    const selects = filtrosForm.querySelectorAll('select');
+    
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            filtrosForm.submit();
+        });
+    });
+
+    // Búsqueda con delay para mejor UX
+    const searchInput = document.getElementById('q');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            if (this.value.length >= 3 || this.value.length === 0) {
+                // Opcional: auto-submit después de 3 caracteres
+                // filtrosForm.submit();
+            }
+        }, 500);
+    });
+});
+</script>
+{% endblock %}

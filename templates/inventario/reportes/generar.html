@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}Generar Reportes - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Generar Reportes{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'reportes' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver a Reportes
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Configurar Reporte
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="reporteForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.tipo.id_for_label }}" class="form-label">
+                            <i class="bi bi-graph-up"></i> {{ form.tipo.label }} *
+                        </label>
+                        {{ form.tipo }}
+                        {% if form.tipo.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.tipo.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Selecciona el tipo de reporte a generar</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.sucursal.id_for_label }}" class="form-label">
+                                    <i class="bi bi-building"></i> {{ form.sucursal.label }}
+                                </label>
+                                {{ form.sucursal }}
+                                {% if form.sucursal.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.sucursal.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Filtrar por sucursal específica</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3" id="categoria-field">
+                                <label for="{{ form.categoria.id_for_label }}" class="form-label">
+                                    <i class="bi bi-tags"></i> {{ form.categoria.label }}
+                                </label>
+                                {{ form.categoria }}
+                                {% if form.categoria.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.categoria.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Filtrar por categoría de productos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="fechas-field">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.fecha_desde.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar"></i> {{ form.fecha_desde.label }}
+                                </label>
+                                {{ form.fecha_desde }}
+                                {% if form.fecha_desde.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.fecha_desde.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.fecha_hasta.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar"></i> {{ form.fecha_hasta.label }}
+                                </label>
+                                {{ form.fecha_hasta }}
+                                {% if form.fecha_hasta.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.fecha_hasta.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-download"></i> Generar y Descargar Excel
+                        </button>
+                        <a href="{% url 'reportes' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Tipos de Reportes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-box-seam text-primary me-2"></i>
+                        <strong>Reporte de Stock</strong>
+                    </div>
+                    <small class="text-muted">Inventario actual por producto y sucursal, incluyendo alertas de stock bajo.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-arrow-left-right text-success me-2"></i>
+                        <strong>Reporte de Movimientos</strong>
+                    </div>
+                    <small class="text-muted">Historial completo de entradas, salidas y transferencias en un período específico.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        <strong>Reporte de Alertas</strong>
+                    </div>
+                    <small class="text-muted">Alertas activas de stock bajo, productos vencidos y próximos vencimientos.</small>
+                </div>
+                
+                <div class="mb-0">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-calendar-x text-danger me-2"></i>
+                        <strong>Productos por Vencer</strong>
+                    </div>
+                    <small class="text-muted">Productos con fecha de vencimiento en los próximos 30 días.</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Formato Excel
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-check-circle"></i> Características:</h6>
+                    <ul class="mb-0 small">
+                        <li>Encabezados con formato y colores</li>
+                        <li>Celdas con colores según estado</li>
+                        <li>Columnas autoajustadas</li>
+                        <li>Datos ordenados cronológicamente</li>
+                        <li>Compatible con Excel y LibreOffice</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mostrar/ocultar campos según tipo de reporte
+document.getElementById('{{ form.tipo.id_for_label }}').addEventListener('change', function() {
+    const tipoReporte = this.value;
+    const fechasField = document.getElementById('fechas-field');
+    const categoriaField = document.getElementById('categoria-field');
+    
+    // Mostrar campos de fecha solo para movimientos
+    if (tipoReporte === 'movimientos') {
+        fechasField.style.display = 'block';
+    } else {
+        fechasField.style.display = 'none';
+        // Limpiar fechas
+        document.getElementById('{{ form.fecha_desde.id_for_label }}').value = '';
+        document.getElementById('{{ form.fecha_hasta.id_for_label }}').value = '';
+    }
+    
+    // Mostrar categoría solo para stock
+    if (tipoReporte === 'stock') {
+        categoriaField.style.display = 'block';
+    } else {
+        categoriaField.style.display = 'none';
+        // Limpiar categoría
+        document.getElementById('{{ form.categoria.id_for_label }}').value = '';
+    }
+});
+
+// Configuración inicial
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoInicial = document.getElementById('{{ form.tipo.id_for_label }}').value;
+    if (tipoInicial !== 'movimientos') {
+        document.getElementById('fechas-field').style.display = 'none';
+    }
+    if (tipoInicial !== 'stock') {
+        document.getElementById('categoria-field').style.display = 'none';
+    }
+});
+
+// Validación del formulario
+document.getElementById('reporteForm').addEventListener('submit', function(e) {
+    const tipo = document.getElementById('{{ form.tipo.id_for_label }}').value;
+    
+    if (!tipo) {
+        e.preventDefault();
+        alert('Debe seleccionar un tipo de reporte');
+        return;
+    }
+    
+    // Mostrar indicador de carga
+    const btn = this.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando reporte...';
+    btn.disabled = true;
+    
+    // Restaurar botón después de un tiempo (por si hay error)
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 10000);
+});
+</script>
+{% endblock %}

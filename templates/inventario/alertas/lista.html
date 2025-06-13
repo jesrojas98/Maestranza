@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+
+{% block title %}Alertas de Stock - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Alertas de Stock{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-outline-primary" onclick="actualizarAlertas()">
+        <i class="bi bi-arrow-clockwise"></i> Actualizar Alertas
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="tipo" class="form-label">Tipo de Alerta</label>
+                <select class="form-select" id="tipo" name="tipo">
+                    <option value="">Todos los tipos</option>
+                    {% for valor, etiqueta in tipos_alerta %}
+                        <option value="{{ valor }}" {% if valor == tipo_seleccionado %}selected{% endif %}>
+                            {{ etiqueta }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="sucursal" class="form-label">Sucursal</label>
+                <select class="form-select" id="sucursal" name="sucursal">
+                    <option value="">Todas las sucursales</option>
+                    {% for sucursal in sucursales %}
+                        <option value="{{ sucursal.id }}" {% if sucursal.id == sucursal_seleccionada|add:0 %}selected{% endif %}>
+                            {{ sucursal.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <a href="{% url 'alertas_stock' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumen de alertas -->
+{% if alertas %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                <h4 class="text-danger">{{ alertas.paginator.count }}</h4>
+                <p class="card-text">Alertas Activas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+    <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="bi bi-box text-warning" style="font-size: 2rem;"></i>
+                <h4 class="text-warning">
+                    {{ alertas_stock_bajo }}
+                </h4>
+                <p class="card-text">Stock Bajo</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="bi bi-calendar-x text-info" style="font-size: 2rem;"></i>
+                <h4 class="text-info">
+                    {{ alertas_vencimiento }}
+                </h4>
+                <p class="card-text">Por Vencer</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lista de alertas -->
+<div class="card">
+    <div class="card-body">
+        {% if alertas %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Prioridad</th>
+                            <th>Producto</th>
+                            <th>Sucursal</th>
+                            <th>Tipo</th>
+                            <th>Mensaje</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alerta in alertas %}
+                        <tr class="{% if alerta.tipo == 'vencido' %}table-danger{% elif alerta.tipo == 'stock_bajo' %}table-warning{% endif %}">
+                            <td>
+                                {% if alerta.tipo == 'vencido' %}
+                                    <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                                {% elif alerta.tipo == 'stock_bajo' %}
+                                    <i class="bi bi-exclamation-circle-fill text-warning"></i>
+                                {% else %}
+                                    <i class="bi bi-info-circle-fill text-info"></i>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'detalle_producto' alerta.producto.id %}" class="text-decoration-none">
+                                    <strong>{{ alerta.producto.nombre }}</strong>
+                                </a>
+                                <br><small class="text-muted">{{ alerta.producto.codigo }}</small>
+                            </td>
+                            <td>{{ alerta.sucursal.nombre }}</td>
+                            <td>
+                                <span class="badge 
+                                {% if alerta.tipo == 'stock_bajo' %}bg-warning text-dark
+                                {% elif alerta.tipo == 'vencimiento' %}bg-info
+                                {% elif alerta.tipo == 'vencido' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                    {{ alerta.get_tipo_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {{ alerta.mensaje }}
+                                {% if alerta.lote %}
+                                    <br><small class="text-muted">Lote: {{ alerta.lote.codigo }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ alerta.fecha_creacion|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ alerta.fecha_creacion|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'detalle_producto' alerta.producto.id %}" 
+                                       class="btn btn-outline-primary" title="Ver producto">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'movimiento_inventario' alerta.producto.id %}" 
+                                       class="btn btn-outline-success" title="Registrar movimiento">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'resolver_alerta' alerta.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-secondary" 
+                                                title="Marcar como resuelta"
+                                                onclick="return confirm('¿Marcar esta alerta como resuelta?')">
+                                            <i class="bi bi-check"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if alertas.has_other_pages %}
+                <nav aria-label="Paginación">
+                    <ul class="pagination justify-content-center">
+                        {% if alertas.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Página {{ alertas.number }} de {{ alertas.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if alertas.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ alertas.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                <h4 class="text-success mt-3">¡No hay alertas activas!</h4>
+                <p class="text-muted">
+                    {% if tipo_seleccionado or sucursal_seleccionada %}
+                        No hay alertas que coincidan con los filtros aplicados.
+                    {% else %}
+                        Todo el inventario está bajo control.
+                    {% endif %}
+                </p>
+                <button class="btn btn-primary" onclick="actualizarAlertas()">
+                    <i class="bi bi-arrow-clockwise"></i> Verificar Alertas
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function actualizarAlertas() {
+    // Mostrar indicador de carga
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Verificando...';
+    btn.disabled = true;
+    
+    // Simular verificación (en una implementación real harías una llamada AJAX)
+    setTimeout(() => {
+        location.reload();
+    }, 2000);
+}
+
+// CSS para animación de giro
+const style = document.createElement('style');
+style.textContent = `
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

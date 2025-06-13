@@ -1,0 +1,426 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nueva Ubicación - {{ sucursal_actual.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        border: none;
+    }
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .tipo-card {
+        border: 2px solid #e9ecef;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .tipo-card:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+    }
+    .tipo-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+    }
+    .capacity-input {
+        position: relative;
+    }
+    .capacity-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}">Ubicaciones</a></li>
+            <li class="breadcrumb-item active">Nueva Ubicación</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card form-card">
+                <div class="card-header form-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        Nueva Ubicación - {{ sucursal_actual.nombre }}
+                    </h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <form method="POST" id="ubicacionForm">
+                        {% csrf_token %}
+                        
+                        <!-- Información Básica -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Información Básica
+                                </h5>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.codigo.id_for_label }}" class="form-label">
+                                    Código <span class="text-danger">*</span>
+                                </label>
+                                {{ form.codigo }}
+                                {% if form.codigo.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.codigo.errors }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Código único para identificar la ubicación (ej: EST-001, BOD-A1)
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                                    Nombre <span class="text-danger">*</span>
+                                </label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.nombre.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Ubicación -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Tipo de Ubicación <span class="text-danger">*</span>
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card tipo-card h-100 text-center p-3" data-tipo="estanteria">
+                                            <i class="fas fa-th-large fa-2x text-primary mb-2"></i>
+                                            <h6>Estantería</h6>
+                                            <small class="text-muted">Productos en estantes</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card tipo-card h-100 text-center p-3" data-tipo="bodega">
+                                            <i class="fas fa-warehouse fa-2x text-success mb-2"></i>
+                                            <h6>Bodega</h6>
+                                            <small class="text-muted">Almacenamiento masivo</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card tipo-card h-100 text-center p-3" data-tipo="vitrina">
+                                            <i class="fas fa-store fa-2x text-info mb-2"></i>
+                                            <h6>Vitrina</h6>
+                                            <small class="text-muted">Exhibición de productos</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card tipo-card h-100 text-center p-3" data-tipo="deposito">
+                                            <i class="fas fa-box fa-2x text-warning mb-2"></i>
+                                            <h6>Depósito</h6>
+                                            <small class="text-muted">Almacén temporal</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{ form.tipo }}
+                                {% if form.tipo.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.tipo.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label for="{{ form.descripcion.id_for_label }}" class="form-label">
+                                    Descripción
+                                </label>
+                                {{ form.descripcion }}
+                                {% if form.descripcion.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.descripcion.errors }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Descripción detallada de la ubicación y su propósito
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Capacidad -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-chart-bar me-2"></i>
+                                    Capacidad
+                                </h5>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="capacidadIlimitada">
+                                    <label class="form-check-label" for="capacidadIlimitada">
+                                        Capacidad ilimitada
+                                    </label>
+                                </div>
+                                
+                                <div class="capacity-input">
+                                    <label for="{{ form.capacidad_maxima.id_for_label }}" class="form-label">
+                                        Capacidad Máxima
+                                    </label>
+                                    {{ form.capacidad_maxima }}
+                                    {% if form.capacidad_maxima.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.capacidad_maxima.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Número máximo de productos que puede almacenar
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Sugerencias de capacidad:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>Estantería:</strong> 50-200 productos</li>
+                                        <li><strong>Bodega:</strong> 500-2000 productos</li>
+                                        <li><strong>Vitrina:</strong> 10-50 productos</li>
+                                        <li><strong>Depósito:</strong> 100-500 productos</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary mb-3">
+                                    <i class="fas fa-toggle-on me-2"></i>
+                                    Estado
+                                </h5>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    {{ form.activa }}
+                                    <label class="form-check-label" for="{{ form.activa.id_for_label }}">
+                                        Ubicación activa
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Solo las ubicaciones activas pueden recibir productos
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr class="mb-4">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-1"></i>
+                                        Volver
+                                    </a>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-primary me-2" onclick="previewUbicacion()">
+                                            <i class="fas fa-eye me-1"></i>
+                                            Vista Previa
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i>
+                                            Crear Ubicación
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Vista Previa -->
+<div class="modal fade" id="modalPreview" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vista Previa de la Ubicación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0"><strong id="previewCodigo"></strong></h6>
+                            <small class="text-muted" id="previewTipo"></small>
+                        </div>
+                        <span class="badge bg-success" id="previewEstado">Activa</span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title" id="previewNombre"></h6>
+                        <p class="card-text text-muted" id="previewDescripcion"></p>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">Productos</small>
+                                <div class="fw-bold">0</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Capacidad</small>
+                                <div class="fw-bold" id="previewCapacidad">0/∞</div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Ocupación</small>
+                                <div class="fw-bold">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejo de selección de tipo
+    const tipoCards = document.querySelectorAll('.tipo-card');
+    const tipoInput = document.getElementById('id_tipo');
+    
+    tipoCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Remover selección anterior
+            tipoCards.forEach(c => c.classList.remove('selected'));
+            
+            // Seleccionar nueva card
+            this.classList.add('selected');
+            
+            // Actualizar input hidden
+            tipoInput.value = this.dataset.tipo;
+        });
+    });
+    
+    // Seleccionar tipo inicial si existe
+    if (tipoInput.value) {
+        const selectedCard = document.querySelector(`[data-tipo="${tipoInput.value}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+        }
+    }
+    
+    // Manejo de capacidad ilimitada
+    const capacidadCheck = document.getElementById('capacidadIlimitada');
+    const capacidadInput = document.getElementById('id_capacidad_maxima');
+    
+    capacidadCheck.addEventListener('change', function() {
+        if (this.checked) {
+            capacidadInput.value = '';
+            capacidadInput.disabled = true;
+            capacidadInput.parentElement.style.opacity = '0.5';
+        } else {
+            capacidadInput.disabled = false;
+            capacidadInput.parentElement.style.opacity = '1';
+            capacidadInput.focus();
+        }
+    });
+    
+    // Código automático basado en tipo
+    tipoCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const tipo = this.dataset.tipo;
+            const codigoInput = document.getElementById('id_codigo');
+            
+            if (!codigoInput.value) {
+                const prefijos = {
+                    'estanteria': 'EST-',
+                    'bodega': 'BOD-',
+                    'vitrina': 'VIT-',
+                    'deposito': 'DEP-'
+                };
+                
+                const prefijo = prefijos[tipo] || 'UBI-';
+                const numero = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+                codigoInput.value = prefijo + numero;
+            }
+        });
+    });
+    
+    // Validación del formulario
+    document.getElementById('ubicacionForm').addEventListener('submit', function(e) {
+        if (!tipoInput.value) {
+            e.preventDefault();
+            alert('Por favor, selecciona un tipo de ubicación.');
+            return false;
+        }
+    });
+});
+
+function previewUbicacion() {
+    const codigo = document.getElementById('id_codigo').value || 'SIN CÓDIGO';
+    const nombre = document.getElementById('id_nombre').value || 'Sin nombre';
+    const descripcion = document.getElementById('id_descripcion').value || 'Sin descripción';
+    const tipo = document.getElementById('id_tipo').value;
+    const capacidad = document.getElementById('id_capacidad_maxima').value;
+    const activa = document.getElementById('id_activa').checked;
+    
+    // Mapear tipos
+    const tiposMap = {
+        'estanteria': 'Estantería',
+        'bodega': 'Bodega',
+        'vitrina': 'Vitrina',
+        'deposito': 'Depósito'
+    };
+    
+    // Actualizar modal
+    document.getElementById('previewCodigo').textContent = codigo;
+    document.getElementById('previewNombre').textContent = nombre;
+    document.getElementById('previewDescripcion').textContent = descripcion;
+    document.getElementById('previewTipo').textContent = tiposMap[tipo] || 'Sin tipo';
+    document.getElementById('previewCapacidad').textContent = capacidad ? `0/${capacidad}` : '0/∞';
+    
+    const estadoBadge = document.getElementById('previewEstado');
+    if (activa) {
+        estadoBadge.className = 'badge bg-success';
+        estadoBadge.textContent = 'Activa';
+    } else {
+        estadoBadge.className = 'badge bg-danger';
+        estadoBadge.textContent = 'Inactiva';
+    }
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
+    modal.show();
+}
+</script>
+{% endblock %}

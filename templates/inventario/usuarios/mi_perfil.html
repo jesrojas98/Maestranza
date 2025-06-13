@@ -1,0 +1,428 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 28px;
+    margin: 0 auto 1rem;
+    background: rgba(255,255,255,0.2);
+    border: 4px solid rgba(255,255,255,0.3);
+}
+
+.stat-widget {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.stat-widget:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    margin: 0 auto 1rem;
+}
+
+.info-card {
+    background: white;
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.permission-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    transition: background 0.3s;
+}
+
+.permission-item:hover {
+    background: #e9ecef;
+}
+
+.activity-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #667eea, #764ba2);
+}
+
+.activity-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.activity-item::before {
+    content: '';
+    position: absolute;
+    left: -2rem;
+    top: 1.5rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #667eea;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #667eea;
+}
+
+.quick-action {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    transition: transform 0.3s;
+}
+
+.quick-action:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header del Perfil -->
+    <div class="profile-card text-center">
+        <div class="profile-avatar">
+            {{ user.first_name|first|default:user.username|first|upper }}{{ user.last_name|first|upper }}
+        </div>
+        <h3>{{ user.get_full_name|default:user.username }}</h3>
+        <p class="mb-2 opacity-75">@{{ user.username }}</p>
+        <p class="mb-3 opacity-75">{{ user.email|default:"Sin email configurado" }}</p>
+        
+        <div class="d-flex justify-content-center align-items-center gap-3">
+            <span class="badge {% if user.perfil.rol == 'administrador' %}bg-success{% elif user.perfil.rol == 'gestor_inventario' %}bg-info{% else %}bg-warning{% endif %} fs-6 px-3 py-2">
+                {{ user.perfil.get_rol_display }}
+            </span>
+            {% if user.perfil.sucursal_asignada %}
+            <span class="opacity-75">
+                <i class="fas fa-building me-1"></i>{{ user.perfil.sucursal_asignada.nombre }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            <!-- Estadísticas Personales -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-widget">
+                        <div class="stat-icon bg-primary">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <h4 class="mb-1">{{ stats.movimientos_realizados }}</h4>
+                        <small class="text-muted">Movimientos Realizados</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-widget">
+                        <div class="stat-icon bg-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4 class="mb-1">{{ stats.alertas_resueltas }}</h4>
+                        <small class="text-muted">Alertas Resueltas</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-widget">
+                        <div class="stat-icon bg-info">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                        <h4 class="mb-1">{{ stats.fecha_registro|timesince }}</h4>
+                        <small class="text-muted">En el Sistema</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-widget">
+                        <div class="stat-icon bg-warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h4 class="mb-1">
+                            {% if stats.ultimo_acceso %}{{ stats.ultimo_acceso|timesince }}{% else %}Nunca{% endif %}
+                        </h4>
+                        <small class="text-muted">Último Acceso</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actividad Reciente -->
+            <div class="card info-card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-history me-2"></i>Mi Actividad Reciente</h5>
+                </div>
+                <div class="card-body">
+                    {% if actividad_reciente %}
+                    <div class="activity-timeline">
+                        {% for movimiento in actividad_reciente %}
+                        <div class="activity-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <span class="badge bg-{% if movimiento.tipo == 'entrada' %}success{% elif movimiento.tipo == 'salida' %}danger{% elif movimiento.tipo == 'transferencia' %}info{% else %}warning{% endif %} me-2">
+                                            {{ movimiento.get_tipo_display }}
+                                        </span>
+                                        {{ movimiento.producto.nombre }}
+                                    </h6>
+                                    <p class="text-muted mb-1">
+                                        <i class="fas fa-building me-1"></i>{{ movimiento.sucursal.nombre }}
+                                        <span class="mx-2">•</span>
+                                        Cantidad: {{ movimiento.cantidad }} {{ movimiento.producto.unidad_medida }}
+                                    </p>
+                                    {% if movimiento.motivo %}
+                                    <p class="small text-muted mb-0">
+                                        <i class="fas fa-comment me-1"></i>{{ movimiento.motivo }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ movimiento.fecha|date:"d/m H:i" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h5>Sin actividad reciente</h5>
+                        <p class="text-muted">Aún no has realizado movimientos en el sistema.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Accesos y Sesiones -->
+            <div class="card info-card">
+                <div class="card-header">
+                    <h5><i class="fas fa-desktop me-2"></i>Información de Acceso</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Te uniste al sistema</h6>
+                            <p class="text-muted">{{ stats.fecha_registro|date:"d/m/Y" }}</p>
+                            <small class="text-muted">Hace {{ stats.fecha_registro|timesince }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Último acceso</h6>
+                            {% if stats.ultimo_acceso %}
+                            <p class="text-muted">{{ stats.ultimo_acceso|date:"d/m/Y H:i" }}</p>
+                            <small class="text-muted">Hace {{ stats.ultimo_acceso|timesince }}</small>
+                            {% else %}
+                            <p class="text-muted">Esta es tu primera sesión</p>
+                            <small class="text-muted">¡Bienvenido al sistema!</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Mis Permisos -->
+            <div class="card info-card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Mis Permisos</h6>
+                </div>
+                <div class="card-body">
+                    {% if user.perfil.puede_gestionar_productos %}
+                    <div class="permission-item">
+                        <i class="fas fa-check text-success me-3"></i>
+                        <div>
+                            <strong>Gestionar Productos</strong>
+                            <br><small class="text-muted">Crear, editar y eliminar productos</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user.perfil.puede_gestionar_inventario %}
+                    <div class="permission-item">
+                        <i class="fas fa-check text-success me-3"></i>
+                        <div>
+                            <strong>Gestionar Inventario</strong>
+                            <br><small class="text-muted">Realizar movimientos de stock</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user.perfil.puede_asignar_ubicaciones %}
+                    <div class="permission-item">
+                        <i class="fas fa-check text-success me-3"></i>
+                        <div>
+                            <strong>Asignar Ubicaciones</strong>
+                            <br><small class="text-muted">Gestionar ubicaciones de productos</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user.perfil.puede_ver_alertas %}
+                    <div class="permission-item">
+                        <i class="fas fa-check text-success me-3"></i>
+                        <div>
+                            <strong>Gestionar Alertas</strong>
+                            <br><small class="text-muted">Ver y resolver alertas del sistema</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if user.perfil.puede_crear_usuarios %}
+                    <div class="permission-item">
+                        <i class="fas fa-check text-success me-3"></i>
+                        <div>
+                            <strong>Gestionar Usuarios</strong>
+                            <br><small class="text-muted">Crear y administrar usuarios</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="permission-item">
+                        <i class="fas fa-check text-success me-3"></i>
+                        <div>
+                            <strong>Descargar Reportes</strong>
+                            <br><small class="text-muted">Exportar datos en Excel</small>
+                        </div>
+                    </div>
+
+                    {% if user.perfil.solo_lectura %}
+                    <div class="permission-item">
+                        <i class="fas fa-eye text-info me-3"></i>
+                        <div>
+                            <strong>Solo Lectura</strong>
+                            <br><small class="text-muted">Visualizar información del sistema</small>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Información Personal -->
+            <div class="card info-card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-user me-2"></i>Información Personal</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Nombre:</strong><br>
+                        <span class="text-muted">{{ user.get_full_name|default:"No configurado" }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Email:</strong><br>
+                        <span class="text-muted">{{ user.email|default:"No configurado" }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Rol:</strong><br>
+                        <span class="badge {% if user.perfil.rol == 'administrador' %}bg-success{% elif user.perfil.rol == 'gestor_inventario' %}bg-info{% else %}bg-warning{% endif %}">
+                            {{ user.perfil.get_rol_display }}
+                        </span>
+                    </div>
+                    
+                    {% if user.perfil.sucursal_asignada %}
+                    <div class="mb-0">
+                        <strong>Sucursal Asignada:</strong><br>
+                        <span class="text-muted">
+                            <i class="fas fa-building me-1"></i>{{ user.perfil.sucursal_asignada.nombre }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card info-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'cambiar_password' %}" class="btn quick-action">
+                            <i class="fas fa-key me-2"></i>Cambiar Contraseña
+                        </a>
+                        
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-tachometer-alt me-2"></i>Ir al Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Efectos de hover en las estadísticas
+    $('.stat-widget').hover(
+        function() {
+            $(this).find('.stat-icon').addClass('animate__animated animate__pulse');
+        },
+        function() {
+            $(this).find('.stat-icon').removeClass('animate__animated animate__pulse');
+        }
+    );
+
+    // Tooltip para los permisos
+    $('.permission-item').each(function() {
+        $(this).attr('title', 'Permiso activo para tu rol');
+    });
+
+    // Auto-refresh para estadísticas (opcional)
+    setInterval(function() {
+        // Aquí se podría implementar una actualización automática de estadísticas
+        // mediante AJAX si es necesario
+    }, 300000); // 5 minutos
+});
+</script>
+{% endblock %}

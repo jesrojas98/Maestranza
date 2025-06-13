@@ -1,0 +1,683 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ producto.nombre }} - Sistema de Inventario{% endblock %}
+
+{% block page_title %}{{ producto.nombre }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'lista_productos' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+    <a href="{% url 'editar_producto' producto.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-pencil"></i> Editar
+    </a>
+    {% if producto.maneja_lotes %}
+    <a href="{% url 'lista_lotes' producto.id %}" class="btn btn-outline-info" title="Gestionar lotes">
+        <i class="bi bi-box-seam"></i>
+    </a>
+    {% endif %}
+    <a href="{% url 'movimiento_inventario' producto.id %}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Movimiento
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.producto-imagen-detalle {
+    width: 100%;
+    height: 300px;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+}
+
+.producto-imagen-detalle:hover {
+    transform: scale(1.02);
+}
+
+.imagen-placeholder-detalle {
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #dee2e6;
+    color: #6c757d;
+}
+
+.zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.modal-imagen img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.imagen-producto-container {
+    width: 100%;
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.imagen-producto-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.imagen-producto-container img:hover {
+    transform: scale(1.02);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ✅ PRIMERA FILA: Imagen, Información y Historial de Precios -->
+<div class="row">
+    <!-- Imagen del producto -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-image"></i> Imagen del Producto
+                </h5>
+            </div>
+            <div class="card-body p-2">
+                <div class="position-relative">
+                    {% if producto.imagen %}
+                        <div class="zoom-controls">
+                            <button class="btn btn-sm btn-outline-light" 
+                                    onclick="abrirModalImagen()" 
+                                    title="Ver en tamaño completo">
+                                <i class="bi bi-zoom-in"></i>
+                            </button>
+                        </div>
+                        <div class="imagen-producto-container">
+                            <img src="{{ producto.imagen.url }}" 
+                                 alt="{{ producto.nombre }}"
+                                 onclick="abrirModalImagen()">
+                        </div>
+                    {% else %}
+                        <div class="imagen-placeholder-detalle">
+                            <div class="text-center">
+                                <i class="bi bi-image" style="font-size: 3rem;"></i>
+                                <p class="mt-2 mb-0">Sin imagen disponible</p>
+                                <a href="{% url 'editar_producto' producto.id %}" 
+                                   class="btn btn-sm btn-outline-primary mt-2">
+                                    <i class="bi bi-plus"></i> Agregar imagen
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del producto -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Información del Producto
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Código:</dt>
+                    <dd class="col-sm-8"><code>{{ producto.codigo }}</code></dd>
+                    
+                    <dt class="col-sm-4">Nombre:</dt>
+                    <dd class="col-sm-8">{{ producto.nombre }}</dd>
+                    
+                    {% if producto.descripcion %}
+                    <dt class="col-sm-4">Descripción:</dt>
+                    <dd class="col-sm-8">{{ producto.descripcion }}</dd>
+                    {% endif %}
+                    
+                    <dt class="col-sm-4">Categoría:</dt>
+                    <dd class="col-sm-8">
+                        {% if producto.categoria %}
+                            <span class="badge" style="background-color: {{ producto.categoria.color }}">
+                                {{ producto.categoria.nombre }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">Sin categoría</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Unidad:</dt>
+                    <dd class="col-sm-8">{{ producto.unidad_medida }}</dd>
+                    
+                    <dt class="col-sm-4">Stock mínimo:</dt>
+                    <dd class="col-sm-8">{{ producto.stock_minimo }}</dd>
+
+                    <dt class="col-sm-4">Precio:</dt>
+                    <dd class="col-sm-8">
+                        {% if estadisticas_precio.tiene_precio %}
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="h5 text-success mb-0">{{ estadisticas_precio.precio_formateado }}</span>
+                                
+                                {% if variacion_precio %}
+                                    <span class="badge 
+                                        {% if variacion_precio.tipo == 'aumento' %}bg-success
+                                        {% elif variacion_precio.tipo == 'disminucion' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {% if variacion_precio.tipo == 'aumento' %}↗{% elif variacion_precio.tipo == 'disminucion' %}↘{% endif %}
+                                        {{ variacion_precio.porcentaje }}%
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="small text-muted mb-2">
+                                {% if estadisticas_precio.fecha_ultima_actualizacion %}
+                                    <i class="bi bi-clock"></i> Actualizado {{ estadisticas_precio.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}
+                                {% endif %}
+                                
+                                {% if ultimo_cambio_precio %}
+                                    <br><span class="text-info">
+                                        <i class="bi bi-person"></i> 
+                                        Último cambio: {{ ultimo_cambio_precio.usuario.get_full_name|default:ultimo_cambio_precio.usuario.username|default:"Sistema" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Sin precio asignado</span>
+                            <br><button type="button" 
+                                        class="btn btn-sm btn-primary mt-1" 
+                                        onclick="abrirModalPrecio()">
+                                <i class="bi bi-plus"></i> Asignar precio
+                            </button>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Estado:</dt>
+                    <dd class="col-sm-8">
+                        {% if producto.activo %}
+                            <span class="badge bg-success">Activo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Creado:</dt>
+                    <dd class="col-sm-8">{{ producto.created_at|date:"d/m/Y H:i" }}</dd>
+                </dl>
+                
+                {% if producto.etiquetas.all %}
+                <div class="mt-3">
+                    <small class="text-muted">Etiquetas:</small><br>
+                    {% for etiqueta in producto.etiquetas.all %}
+                        <span class="badge me-1" style="background-color: {{ etiqueta.color }}">
+                            {{ etiqueta.nombre }}
+                        </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Configuración especial -->
+        {% if producto.maneja_lotes or producto.maneja_vencimiento %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-gear"></i> Configuración Especial
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if producto.maneja_lotes %}
+                <div class="mb-2">
+                    <i class="bi bi-box-seam text-info"></i>
+                    <span class="small">Maneja lotes</span>
+                </div>
+                {% endif %}
+                {% if producto.maneja_vencimiento %}
+                <div class="mb-2">
+                    <i class="bi bi-calendar-x text-warning"></i>
+                    <span class="small">Controla vencimiento</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ✅ HISTORIAL DE PRECIOS (DENTRO DE LA PRIMERA FILA) -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-currency-dollar"></i> Historial de Precios
+                </h6>
+            </div>
+            <div class="card-body">
+
+                <!-- Precios directos del producto -->
+                {% if historial_precios_producto %}
+                    <h6 class="text-primary small mb-3">
+                        <i class="bi bi-tag"></i> Precio del Producto
+                    </h6>
+                    {% for historial in historial_precios_producto %}
+                    <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom">
+                        <div>
+                            <div class="fw-bold text-success fs-5">
+                                ${{ historial.precio|floatformat:2 }}
+                            </div>
+                            
+                            {% if historial.usuario %}
+                                <br><small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ historial.usuario.get_full_name|default:historial.usuario.username }}
+                                </small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-end">
+                            <small class="text-muted">
+                                {{ historial.fecha|date:"d/m/Y" }}<br>
+                                {{ historial.fecha|date:"H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Precios de proveedores -->
+                {% if historial_precios_proveedores %}
+                    {% if historial_precios_producto %}<hr>{% endif %}
+                    <h6 class="text-info small mb-3">
+                        <i class="bi bi-truck"></i> Precios de Proveedores
+                    </h6>
+                    {% for historial in historial_precios_proveedores %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div>
+                            <small class="text-muted">{{ historial.proveedor.nombre }}</small>
+                            <div class="fw-bold">${{ historial.precio|floatformat:2 }}</div>
+                        </div>
+                        <small class="text-muted">{{ historial.fecha|date:"d/m/Y" }}</small>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Historial combinado (fallback) -->
+                {% if not historial_precios_producto and not historial_precios_proveedores and historial_precios %}
+                    <h6 class="text-secondary small mb-3">
+                        <i class="bi bi-clock-history"></i> Historial General
+                    </h6>
+                    {% for precio in historial_precios %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div>
+                            {% if precio.proveedor %}
+                                <small class="text-muted">{{ precio.proveedor.nombre }}</small>
+                            {% else %}
+                                <small class="text-info">Precio Directo</small>
+                            {% endif %}
+                            <div class="fw-bold">${{ precio.precio|floatformat:2 }}</div>
+                            
+                            {% if precio.usuario %}
+                                <br><small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ precio.usuario.get_full_name|default:precio.usuario.username }}
+                                </small>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ precio.fecha|date:"d/m/Y" }}</small>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <!-- Sin historial -->
+                {% if not historial_precios_producto and not historial_precios_proveedores and not historial_precios %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-graph-up text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2 small">Sin historial de precios</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ✅ LOTES MOVIDOS AQUÍ PARA MEJOR ORGANIZACIÓN -->
+        {% if producto.maneja_lotes and lotes %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-box-seam"></i> Lotes
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for lote in lotes %}
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                    <div>
+                        <code class="small">{{ lote.codigo }}</code>
+                        {% if lote.fecha_vencimiento %}
+                            <div class="small {% if lote.esta_vencido %}text-danger{% elif lote.dias_vencimiento <= 30 %}text-warning{% else %}text-muted{% endif %}">
+                                Vence: {{ lote.fecha_vencimiento|date:"d/m/Y" }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">${{ lote.precio_compra|floatformat:2 }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<!-- ✅ FIN DE LA PRIMERA FILA -->
+
+<!-- ✅ SEGUNDA FILA: Inventario y Movimientos -->
+<div class="row">
+    <!-- Inventario por sucursal -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building"></i> Inventario por Sucursal
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if inventarios %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sucursal</th>
+                                    <th>Stock Actual</th>
+                                    <th>Ubicación</th>
+                                    <th>Estado</th>
+                                    <th>Última Actualización</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inventario in inventarios %}
+                                <tr>
+                                    <td>{{ inventario.sucursal.nombre }}</td>
+                                    <td>
+                                        <span class="fw-bold {% if inventario.necesita_reposicion %}text-danger{% elif inventario.cantidad > producto.stock_minimo %}text-success{% else %}text-warning{% endif %}">
+                                            {{ inventario.cantidad }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if inventario.ubicacion %}
+                                            {{ inventario.ubicacion }}
+                                        {% else %}
+                                            <span class="text-muted">No especificada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if inventario.necesita_reposicion %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-exclamation-triangle"></i> Reposición
+                                            </span>
+                                        {% elif inventario.cantidad == 0 %}
+                                            <span class="badge bg-secondary">Sin stock</span>
+                                        {% elif inventario.cantidad <= producto.stock_minimo %}
+                                            <span class="badge bg-warning">Stock bajo</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ inventario.updated_at|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>Total:</th>
+                                    <th colspan="4">
+                                        <span class="fw-bold text-primary">
+                                            {{ stock_total }} {{ producto.unidad_medida }}
+                                        </span>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-building text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No hay inventario registrado</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Movimientos recientes -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-left-right"></i> Movimientos Recientes
+                </h5>
+                <a href="{% url 'lista_movimientos' %}?producto={{ producto.id }}" class="btn btn-sm btn-outline-primary">
+                    Ver todos
+                </a>
+            </div>
+            <div class="card-body">
+                {% if movimientos %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Sucursal</th>
+                                    <th>Cantidad</th>
+                                    <th>Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movimiento in movimientos %}
+                                <tr>
+                                    <td>{{ movimiento.fecha|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        <span class="badge 
+                                        {% if movimiento.tipo == 'entrada' %}bg-success
+                                        {% elif movimiento.tipo == 'salida' %}bg-danger
+                                        {% elif movimiento.tipo == 'transferencia' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ movimiento.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ movimiento.sucursal.nombre }}</td>
+                                    <td>
+                                        {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' %}-{% endif %}{{ movimiento.cantidad }}
+                                    </td>
+                                    <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="bi bi-clock-history text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">No hay movimientos registrados</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver imagen en tamaño completo -->
+{% if producto.imagen %}
+<div class="modal fade" id="modalImagen" tabindex="-1" aria-labelledby="modalImagenLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalImagenLabel">{{ producto.nombre }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center modal-imagen">
+                <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="img-fluid">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <a href="{{ producto.imagen.url }}" target="_blank" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-up-right"></i> Abrir en nueva pestaña
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal para actualizar precio -->
+<div class="modal fade" id="modalPrecio" tabindex="-1" aria-labelledby="modalPrecioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPrecioLabel">
+                    <i class="bi bi-currency-dollar"></i> 
+                    {% if producto.precio %}Actualizar{% else %}Asignar{% endif %} Precio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPrecio">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="nuevoPrecio" class="form-label">Nuevo precio</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">$</span>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="nuevoPrecio" 
+                                   name="precio"
+                                   value="{{ producto.precio|default:'' }}"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    {% if producto.precio %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Precio actual:</strong> {{ estadisticas_precio.precio_formateado|default:producto.precio }}
+                        {% if ultimo_cambio_precio %}
+                            <br><small class="text-muted">
+                                Último cambio: {{ ultimo_cambio_precio.fecha_cambio|date:"d/m/Y H:i" }} 
+                                por {{ ultimo_cambio_precio.usuario.get_full_name|default:ultimo_cambio_precio.usuario.username }}
+                            </small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="observaciones" class="form-label">Observaciones (opcional)</label>
+                        <textarea class="form-control" 
+                                  id="observaciones" 
+                                  name="observaciones" 
+                                  rows="2"
+                                  placeholder="Motivo del cambio de precio..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarPrecio()">
+                    <i class="bi bi-check-lg"></i> Guardar Precio
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function abrirModalPrecio() {
+    const modal = new bootstrap.Modal(document.getElementById('modalPrecio'));
+    modal.show();
+    document.getElementById('nuevoPrecio').focus();
+}
+
+function guardarPrecio() {
+    const form = document.getElementById('formPrecio');
+    const formData = new FormData(form);
+    
+    // ✅ Crear URL manualmente ya que puede no existir la vista AJAX
+    const url = `/productos/{{ producto.id }}/precio/ajax/`;
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalPrecio')).hide();
+            showAlert('success', data.mensaje);
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showAlert('danger', data.error || 'Error al actualizar precio');
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Error de conexión. Intenta desde el formulario de edición.');
+        console.error('Error:', error);
+    });
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid') || document.body;
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+function abrirModalImagen() {
+    const modal = new bootstrap.Modal(document.getElementById('modalImagen'));
+    modal.show();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalImagen'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+});
+</script>
+{% endblock %}

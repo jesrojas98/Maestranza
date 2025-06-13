@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Reportes y Análisis{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Reportes Rápidos -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i> Reportes Rápidos
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="bi bi-box-seam text-primary" style="font-size: 2rem;"></i>
+                                <h6 class="mt-2">Inventario Actual</h6>
+                                <p class="small text-muted">Stock por sucursal y producto</p>
+                                <button class="btn btn-primary btn-sm" onclick="generarReporte('stock')">
+                                    <i class="bi bi-download"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="bi bi-arrow-left-right text-success" style="font-size: 2rem;"></i>
+                                <h6 class="mt-2">Movimientos</h6>
+                                <p class="small text-muted">Entradas y salidas del mes</p>
+                                <button class="btn btn-success btn-sm" onclick="generarReporte('movimientos')">
+                                    <i class="bi bi-download"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                                <h6 class="mt-2">Stock Bajo</h6>
+                                <p class="small text-muted">Productos que requieren reposición</p>
+                                <button class="btn btn-warning btn-sm" onclick="generarReporte('alertas')">
+                                    <i class="bi bi-download"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="bi bi-calendar-x text-info" style="font-size: 2rem;"></i>
+                                <h6 class="mt-2">Por Vencer</h6>
+                                <p class="small text-muted">Productos próximos a vencer</p>
+                                <button class="btn btn-info btn-sm" onclick="generarReporte('vencimientos')">
+                                    <i class="bi bi-download"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <a href="{% url 'generar_reporte' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-gear"></i> Configurar Reporte Personalizado
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estadísticas Rápidas -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Estadísticas del Sistema
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-12 mb-3">
+                        <h4 class="text-success">✅ Funcionando</h4>
+                        <small class="text-muted">Los reportes están listos para descargar</small>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle"></i> Reportes disponibles:</h6>
+                    <ul class="mb-0 small">
+                        <li>Exportación a Excel</li>
+                        <li>Filtros por sucursal y categoría</li>
+                        <li>Rangos de fechas</li>
+                        <li>Formato con colores</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Cómo usar
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <p><strong>Reportes rápidos:</strong></p>
+                    <ul class="mb-2">
+                        <li>Click en "Generar" para descarga inmediata</li>
+                        <li>Incluye todos los datos disponibles</li>
+                    </ul>
+                    
+                    <p><strong>Reporte personalizado:</strong></p>
+                    <ul class="mb-0">
+                        <li>Selecciona filtros específicos</li>
+                        <li>Elige rangos de fecha</li>
+                        <li>Filtra por sucursal o categoría</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de carga -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-3 mb-0">Generando reporte...</p>
+                <small class="text-muted">Por favor espere</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function generarReporte(tipo) {
+    
+    
+    // Crear formulario oculto
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/reportes/generar/';
+    form.style.display = 'none';
+    
+    // Token CSRF
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = getCookie('csrftoken');
+    form.appendChild(csrfInput);
+    
+    // Tipo de reporte
+    const tipoInput = document.createElement('input');
+    tipoInput.type = 'hidden';
+    tipoInput.name = 'tipo';
+    tipoInput.value = tipo;
+    form.appendChild(tipoInput);
+    
+    // Agregar al DOM y enviar
+    document.body.appendChild(form);
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    modal.show();
+    
+    // Enviar formulario
+    form.submit();
+    
+    // Limpiar después de 3 segundos
+    setTimeout(() => {
+        modal.hide();
+        document.body.removeChild(form);
+    }, 3000);
+}
+
+// Función para obtener cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+
+</script>
+{% endblock %}

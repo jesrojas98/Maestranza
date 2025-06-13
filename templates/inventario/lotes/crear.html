@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Lote - {{ producto.nombre }}{% endblock %}
+
+{% block page_title %}Crear Nuevo Lote{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'lista_lotes' producto.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver a Lotes
+    </a>
+    <a href="{% url 'detalle_producto' producto.id %}" class="btn btn-outline-info">
+        <i class="bi bi-box"></i> Ver Producto
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-plus-circle"></i> Información del Lote
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Información del producto -->
+                <div class="alert alert-info">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <strong>Producto:</strong> {{ producto.nombre }}<br>
+                            <strong>Código:</strong> <code>{{ producto.codigo }}</code>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if producto.categoria %}
+                                <span class="badge" style="background-color: {{ producto.categoria.color }}">
+                                    {{ producto.categoria.nombre }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" id="loteForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.codigo.id_for_label }}" class="form-label">
+                                    <i class="bi bi-upc-scan"></i> {{ form.codigo.label }} *
+                                </label>
+                                {{ form.codigo }}
+                                {% if form.codigo.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.codigo.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Código único para identificar el lote</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.proveedor.id_for_label }}" class="form-label">
+                                    <i class="bi bi-truck"></i> {{ form.proveedor.label }} *
+                                </label>
+                                {{ form.proveedor }}
+                                {% if form.proveedor.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.proveedor.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.precio_compra.id_for_label }}" class="form-label">
+                                    <i class="bi bi-currency-dollar"></i> {{ form.precio_compra.label }} *
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.precio_compra }}
+                                </div>
+                                {% if form.precio_compra.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.precio_compra.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Precio de compra unitario</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.fecha_vencimiento.id_for_label }}" class="form-label">
+                                    <i class="bi bi-calendar-event"></i> {{ form.fecha_vencimiento.label }}
+                                    {% if producto.maneja_vencimiento %}*{% endif %}
+                                </label>
+                                {{ form.fecha_vencimiento }}
+                                {% if form.fecha_vencimiento.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.fecha_vencimiento.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    {% if producto.maneja_vencimiento %}
+                                        Fecha cuando el producto vence (obligatorio para este producto)
+                                    {% else %}
+                                        Opcional - Solo si el producto tiene vencimiento
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Errores generales del formulario -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Crear Lote
+                        </button>
+                        <a href="{% url 'lista_lotes' producto.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> ¿Qué es un lote?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb"></i> Los lotes permiten:</h6>
+                    <ul class="mb-0 small">
+                        <li>Rastrear productos por fecha de compra</li>
+                        <li>Controlar fechas de vencimiento</li>
+                        <li>Identificar origen de problemas</li>
+                        <li>Gestionar stock FIFO (primero en entrar, primero en salir)</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Importante:</h6>
+                    <ul class="mb-0 small">
+                        <li>El código debe ser único para este producto</li>
+                        <li>Una vez creado, se registrará en el historial de precios</li>
+                        <li>Si tiene vencimiento, se crearán alertas automáticas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bookmark"></i> Ejemplos de Códigos
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <p><strong>Formatos sugeridos:</strong></p>
+                    <ul class="mb-2">
+                        <li><code>L001-{{ producto.codigo }}</code></li>
+                        <li><code>{% now "Ym" %}{{ producto.codigo }}</code></li>
+                        <li><code>LOTE-001-{{ producto.codigo|slice:":3" }}</code></li>
+                    </ul>
+                    
+                    <p><strong>Incluir información como:</strong></p>
+                    <ul class="mb-0">
+                        <li>Fecha de producción/compra</li>
+                        <li>Número secuencial</li>
+                        <li>Código del proveedor</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Acciones rápidas -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i> Acciones Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crear_proveedor' %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-truck"></i> Nuevo Proveedor
+                    </a>
+                    <a href="{% url 'movimiento_inventario' producto.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-left-right"></i> Registrar Movimiento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-generar código de lote
+document.addEventListener('DOMContentLoaded', function() {
+    const codigoField = document.getElementById('{{ form.codigo.id_for_label }}');
+    const fechaActual = new Date();
+    const año = fechaActual.getFullYear().toString().slice(-2);
+    const mes = ('0' + (fechaActual.getMonth() + 1)).slice(-2);
+    const dia = ('0' + fechaActual.getDate()).slice(-2);
+    
+    // Sugerir código basado en fecha
+    const codigoSugerido = `L${año}${mes}${dia}-{{ producto.codigo|slice:":3" }}`;
+    codigoField.placeholder = `Sugerencia: ${codigoSugerido}`;
+});
+
+// Validar fecha de vencimiento
+document.getElementById('{{ form.fecha_vencimiento.id_for_label }}').addEventListener('change', function() {
+    const fechaVencimiento = new Date(this.value);
+    const fechaActual = new Date();
+    
+    if (fechaVencimiento <= fechaActual) {
+        this.classList.add('is-invalid');
+        // Mostrar advertencia pero permitir continuar
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+
+// Formatear precio en tiempo real
+document.getElementById('{{ form.precio_compra.id_for_label }}').addEventListener('input', function() {
+    let value = this.value;
+    if (value && !isNaN(value)) {
+        // Básicamente validar que sea un número
+        this.classList.remove('is-invalid');
+    }
+});
+
+// Validación antes de enviar
+document.getElementById('loteForm').addEventListener('submit', function(e) {
+    const codigo = document.getElementById('{{ form.codigo.id_for_label }}').value;
+    const proveedor = document.getElementById('{{ form.proveedor.id_for_label }}').value;
+    const precio = document.getElementById('{{ form.precio_compra.id_for_label }}').value;
+    
+    if (!codigo || !proveedor || !precio) {
+        e.preventDefault();
+        alert('Por favor completa todos los campos obligatorios');
+        return;
+    }
+    
+    {% if producto.maneja_vencimiento %}
+    const fechaVencimiento = document.getElementById('{{ form.fecha_vencimiento.id_for_label }}').value;
+    if (!fechaVencimiento) {
+        e.preventDefault();
+        alert('Este producto requiere fecha de vencimiento');
+        return;
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

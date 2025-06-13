@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Proveedor - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Crear Nuevo Proveedor{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'lista_proveedores' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver a Proveedores
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-truck"></i> Información del Proveedor
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                            <i class="bi bi-building"></i> Nombre del Proveedor *
+                        </label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.nombre.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Razón social o nombre comercial del proveedor</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.contacto.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person"></i> Persona de Contacto
+                                </label>
+                                {{ form.contacto }}
+                                {% if form.contacto.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.contacto.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Nombre del representante o contacto principal</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.telefono.id_for_label }}" class="form-label">
+                                    <i class="bi bi-telephone"></i> Teléfono
+                                </label>
+                                {{ form.telefono }}
+                                {% if form.telefono.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.telefono.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Número de contacto principal</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            <i class="bi bi-envelope"></i> Email
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.email.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Correo electrónico para comunicaciones</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.direccion.id_for_label }}" class="form-label">
+                            <i class="bi bi-geo-alt"></i> Dirección
+                        </label>
+                        {{ form.direccion }}
+                        {% if form.direccion.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.direccion.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Dirección completa del proveedor</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.activo }}
+                            <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                                <i class="bi bi-check-circle"></i> Proveedor activo
+                            </label>
+                            <div class="form-text">Los proveedores inactivos no aparecen en las listas de selección</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Crear Proveedor
+                        </button>
+                        <a href="{% url 'lista_proveedores' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Información del Proveedor
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb"></i> Datos importantes:</h6>
+                    <ul class="mb-0 small">
+                        <li>Solo el nombre es obligatorio</li>
+                        <li>El email permite comunicación automática</li>
+                        <li>El teléfono facilita el contacto directo</li>
+                        <li>La persona de contacto ayuda en las gestiones</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-graph-up"></i> Beneficios:</h6>
+                    <ul class="mb-0 small">
+                        <li>Historial de precios por proveedor</li>
+                        <li>Seguimiento de compras</li>
+                        <li>Análisis de rendimiento</li>
+                        <li>Gestión centralizada de contactos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-bookmark"></i> Ejemplos de Proveedores
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="mb-2">
+                        <strong>Ferretería Mayorista S.A.</strong><br>
+                        <span class="text-muted">Contacto: Juan Pérez</span><br>
+                        <span class="text-muted">Tel: +56 2 2111 2222</span>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Herramientas Pro Ltda.</strong><br>
+                        <span class="text-muted">Contacto: María González</span><br>
+                        <span class="text-muted">Email: ventas@herramientaspro.cl</span>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong>Distribuidora El Martillo</strong><br>
+                        <span class="text-muted">Contacto: Carlos Silva</span><br>
+                        <span class="text-muted">Tel: +56 2 2555 6666</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Formatear teléfono automáticamente
+document.getElementById('{{ form.telefono.id_for_label }}').addEventListener('input', function() {
+    let value = this.value.replace(/\D/g, '');
+    if (value.startsWith('56')) {
+        // Formato chileno: +56 9 1234 5678
+        if (value.length >= 11) {
+            this.value = '+' + value.substring(0, 2) + ' ' + value.substring(2, 3) + ' ' + 
+                        value.substring(3, 7) + ' ' + value.substring(7, 11);
+        }
+    } else if (value.length >= 8) {
+        // Formato local: 2234 5678
+        this.value = value.substring(0, 4) + ' ' + value.substring(4, 8);
+    }
+});
+
+// Validar email en tiempo real
+document.getElementById('{{ form.email.id_for_label }}').addEventListener('blur', function() {
+    const email = this.value;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (email && !emailRegex.test(email)) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+</script>
+{% endblock %}

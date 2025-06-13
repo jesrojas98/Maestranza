@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block extra_css %}
+<style>
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 14px;
+}
+
+.role-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.user-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.stats-card .card-body {
+    padding: 1.5rem;
+}
+
+.filter-section {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-users me-2"></i>Gestión de Usuarios</h2>
+            <p class="text-muted mb-0">Administrar usuarios del sistema y sus permisos</p>
+        </div>
+        <div>
+            <a href="{% url 'crear_usuario' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nuevo Usuario
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ stats.total_usuarios }}</h3>
+                    <small>Total Usuarios</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ stats.administradores }}</h3>
+                    <small>Administradores</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ stats.gestores }}</h3>
+                    <small>Gestores</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ stats.usuarios_lectura }}</h3>
+                    <small>Solo Lectura</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ stats.activos }}</h3>
+                    <small>Activos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ stats.inactivos }}</h3>
+                    <small>Inactivos</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-section">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Buscar</label>
+                <input type="text" class="form-control" name="q" 
+                       value="{{ filtros.busqueda }}" 
+                       placeholder="Nombre, usuario o email...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Rol</label>
+                <select class="form-select" name="rol">
+                    <option value="">Todos</option>
+                    {% for value, label in roles_choices %}
+                        <option value="{{ value }}" {% if filtros.rol == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select class="form-select" name="activo">
+                    <option value="">Todos</option>
+                    <option value="true" {% if filtros.activo == 'true' %}selected{% endif %}>Activos</option>
+                    <option value="false" {% if filtros.activo == 'false' %}selected{% endif %}>Inactivos</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sucursal</label>
+                <select class="form-select" name="sucursal">
+                    <option value="">Todas</option>
+                    {% for sucursal in sucursales %}
+                        <option value="{{ sucursal.id }}" {% if filtros.sucursal == sucursal.id|stringformat:"s" %}selected{% endif %}>
+                            {{ sucursal.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Lista de Usuarios -->
+    <div class="row">
+        {% for usuario in usuarios %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card user-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <!-- Avatar -->
+                        <div class="user-avatar me-3" style="background-color: {% if usuario.perfil.rol == 'administrador' %}#28a745{% elif usuario.perfil.rol == 'gestor_inventario' %}#17a2b8{% else %}#ffc107{% endif %}">
+                            {{ usuario.first_name|first|default:usuario.username|first|upper }}{{ usuario.last_name|first|upper }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">
+                                {{ usuario.get_full_name|default:usuario.username }}
+                                <span class="status-indicator {% if usuario.perfil.activo %}bg-success{% else %}bg-danger{% endif %}"></span>
+                            </h6>
+                            <p class="text-muted small mb-0">@{{ usuario.username }}</p>
+                        </div>
+                        <div class="dropdown">                             
+                            <button class="btn btn-link btn-sm" type="button" data-bs-toggle="dropdown">                                 
+                                <i class="fas fa-ellipsis-v"></i>                             
+                            </button>                             
+                            <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1050;">                                 
+                                <li><a class="dropdown-item" href="{% url 'detalle_usuario' usuario.id %}">                                     
+                                    <i class="fas fa-eye me-2"></i>Ver Detalles                                 
+                                </a></li>                                 
+                                <li><a class="dropdown-item" href="{% url 'editar_usuario' usuario.id %}">                                     
+                                    <i class="fas fa-edit me-2"></i>Editar                                 
+                                </a></li>                                                            
+                            </ul>                         
+                        </div>
+                     </div>
+
+                    <!-- Rol -->
+                    <div class="mb-2">
+                        <span class="badge role-badge {% if usuario.perfil.rol == 'administrador' %}bg-success{% elif usuario.perfil.rol == 'gestor_inventario' %}bg-info{% else %}bg-warning{% endif %}">
+                            {{ usuario.perfil.get_rol_display }}
+                        </span>
+                    </div>
+
+                    <!-- Email -->
+                    <p class="small text-muted mb-2">
+                        <i class="fas fa-envelope me-1"></i>{{ usuario.email|default:"Sin email" }}
+                    </p>
+
+                    <!-- Sucursal -->
+                    {% if usuario.perfil.sucursal_asignada %}
+                    <p class="small text-muted mb-2">
+                        <i class="fas fa-building me-1"></i>{{ usuario.perfil.sucursal_asignada.nombre }}
+                    </p>
+                    {% endif %}
+
+                    <!-- Fechas -->
+                    <div class="small text-muted">
+                        <div>Creado: {{ usuario.date_joined|date:"d/m/Y" }}</div>
+                        {% if usuario.last_login %}
+                        <div>Último acceso: {{ usuario.last_login|date:"d/m/Y H:i" }}</div>
+                        {% else %}
+                        <div>Nunca ha ingresado</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>No se encontraron usuarios</h5>
+                    <p class="text-muted">No hay usuarios que coincidan con los filtros aplicados.</p>
+                    <a href="{% url 'crear_usuario' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Primer Usuario
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if usuarios.has_other_pages %}
+    <nav aria-label="Paginación" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if usuarios.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ usuarios.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.rol %}&rol={{ request.GET.rol }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}{% if request.GET.sucursal %}&sucursal={{ request.GET.sucursal }}{% endif %}">Anterior</a>
+                </li>
+            {% endif %}
+
+            {% for num in usuarios.paginator.page_range %}
+                {% if usuarios.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > usuarios.number|add:'-3' and num < usuarios.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.rol %}&rol={{ request.GET.rol }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}{% if request.GET.sucursal %}&sucursal={{ request.GET.sucursal }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if usuarios.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ usuarios.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.rol %}&rol={{ request.GET.rol }}{% endif %}{% if request.GET.activo %}&activo={{ request.GET.activo }}{% endif %}{% if request.GET.sucursal %}&sucursal={{ request.GET.sucursal }}{% endif %}">Siguiente</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Acción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirm-action">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Toggle estado activo/inactivo
+    $('.toggle-status').click(function(e) {
+        e.preventDefault();
+        
+        const userId = $(this).data('user-id');
+        const currentStatus = $(this).data('current-status') === 'true';
+        const action = currentStatus ? 'desactivar' : 'activar';
+        const message = `¿Está seguro que desea ${action} este usuario?`;
+        
+        $('#confirm-message').text(message);
+        
+        $('#confirm-action').off('click').on('click', function() {
+            $.ajax({
+                url: `/usuarios/${userId}/toggle-activo/`,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function(xhr) {
+                    alert('Error al procesar la solicitud.');
+                }
+            });
+            $('#confirmModal').modal('hide');
+        });
+        
+        $('#confirmModal').modal('show');
+    });
+
+    // Auto-submit form on filter change
+    $('.form-select').change(function() {
+        $(this).closest('form').submit();
+    });
+});
+</script>
+{% endblock %}

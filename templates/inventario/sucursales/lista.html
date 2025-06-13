@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Sucursales - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Sucursales{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'crear_sucursal' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Nueva Sucursal
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    {% for sucursal in sucursales %}
+    <div class="col-lg-6 col-xl-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building"></i> {{ sucursal.nombre }}
+                </h5>
+                {% if sucursal.activa %}
+                    <span class="badge bg-success">Activa</span>
+                {% else %}
+                    <span class="badge bg-danger">Inactiva</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Dirección:</dt>
+                    <dd class="col-sm-8">{{ sucursal.direccion|truncatechars:50 }}</dd>
+                    
+                    {% if sucursal.telefono %}
+                    <dt class="col-sm-4">Teléfono:</dt>
+                    <dd class="col-sm-8">{{ sucursal.telefono }}</dd>
+                    {% endif %}
+                    
+                    <dt class="col-sm-4">Creada:</dt>
+                    <dd class="col-sm-8">{{ sucursal.created_at|date:"d/m/Y" }}</dd>
+                </dl>
+            </div>
+            <div class="card-footer">
+                <div class="btn-group w-100" role="group">
+                    <a href="#" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i> Ver
+                    </a>
+                    <a href="#" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <a href="{% url 'lista_ubicaciones' sucursal.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-geo-alt"></i> Ubicaciones
+                    </a>
+                    <a href="{% url 'dashboard' %}?sucursal={{ sucursal.id }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-graph-up"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="bi bi-building text-muted" style="font-size: 4rem;"></i>
+            <h4 class="text-muted mt-3">No hay sucursales registradas</h4>
+            <p class="text-muted">Crea tu primera sucursal para comenzar a gestionar inventario</p>
+            <a href="{% url 'crear_sucursal' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Crear primera sucursal
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if sucursales %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h5 class="text-primary">{{ total_sucursales }}</h5>
+                        <small class="text-muted">Total Sucursales</small>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 class="text-success">{{ sucursales_activas }}</h5>
+                        <small class="text-muted">Sucursales Activas</small>
+                    </div>
+                    <div class="col-md-4">
+                        <h5 class="text-warning">{{ sucursales_inactivas }}</h5>
+                        <small class="text-muted">Sucursales Inactivas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

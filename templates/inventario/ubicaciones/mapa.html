@@ -1,0 +1,726 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mapa de Ubicaciones - {{ sucursal_actual.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mapa-container {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 20px;
+        min-height: 600px;
+        position: relative;
+        overflow: hidden;
+    }
+    .zona-container {
+        margin-bottom: 30px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .zona-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px 10px 0 0;
+    }
+    .ubicacion-item {
+        position: relative;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .ubicacion-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        border-color: #007bff;
+    }
+    .ubicacion-item.activa {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);
+    }
+    .ubicacion-item.inactiva {
+        border-color: #dc3545;
+        background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+        opacity: 0.7;
+    }
+    .ubicacion-item.llena {
+        border-color: #ffc107;
+        background: linear-gradient(135deg, #ffffff 0%, #fffef8 100%);
+    }
+    .ubicacion-item.atencion {
+        border-color: #fd7e14;
+        background: linear-gradient(135deg, #ffffff 0%, #fff9f6 100%);
+    }
+    .ubicacion-codigo {
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-bottom: 5px;
+    }
+    .ubicacion-tipo {
+        font-size: 0.8em;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .ocupacion-bar {
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 8px 0;
+    }
+    .ocupacion-fill {
+        height: 100%;
+        transition: width 0.3s;
+    }
+    .grid-estanterias {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        padding: 20px;
+    }
+    .grid-bodegas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .grid-vitrinas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        padding: 20px;
+    }
+    .grid-depositos {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+        padding: 20px;
+    }
+    .vista-selector {
+        position: sticky;
+        top: 20px;
+        z-index: 100;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .leyenda {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 15px;
+    }
+    .leyenda-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .leyenda-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 10px;
+        border: 2px solid transparent;
+    }
+    .busqueda-mapa {
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .stats-overlay {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        min-width: 200px;
+    }
+    .zona-tabs {
+        background: transparent;
+        border: none;
+    }
+    .zona-tabs .nav-link {
+        background: rgba(255,255,255,0.1);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.2);
+        margin-right: 5px;
+    }
+    .zona-tabs .nav-link.active {
+        background: white;
+        color: #667eea;
+    }
+    @media (max-width: 768px) {
+        .mapa-container {
+            padding: 10px;
+        }
+        .grid-estanterias,
+        .grid-bodegas,
+        .grid-vitrinas,
+        .grid-depositos {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+        .stats-overlay {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin-bottom: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}">Ubicaciones</a></li>
+            <li class="breadcrumb-item active">Mapa</li>
+        </ol>
+    </nav>
+
+    <!-- Header y Controles -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2><i class="fas fa-map me-2"></i>Mapa de Ubicaciones</h2>
+            <p class="text-muted">Vista espacial del inventario - {{ sucursal_actual.nombre }}</p>
+        </div>
+        <div class="col-md-6">
+            <div class="vista-selector">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control busqueda-mapa" 
+                                   placeholder="Buscar ubicación..." id="buscarUbicacion">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="vista" id="vista-zona" checked>
+                                <label class="btn btn-outline-primary" for="vista-zona">Por Zona</label>
+                                
+                                <input type="radio" class="btn-check" name="vista" id="vista-grid">
+                                <label class="btn btn-outline-primary" for="vista-grid">Grid</label>
+                                
+                                <input type="radio" class="btn-check" name="vista" id="vista-lista">
+                                <label class="btn btn-outline-primary" for="vista-lista">Lista</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Mapa Principal -->
+        <div class="col-lg-9">
+            <div class="mapa-container" id="mapaContainer">
+                <!-- Estadísticas Overlay -->
+            
+
+                <!-- Vista por Zonas -->
+                <div id="vista-zonas">
+                    {% regroup ubicaciones by get_tipo_display as ubicaciones_agrupadas %}
+                    {% for grupo in ubicaciones_agrupadas %}
+                    <div class="zona-container">
+                        <div class="zona-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-0">
+                                        {% if grupo.grouper == 'Estantería' %}
+                                            <i class="fas fa-th-large me-2"></i>
+                                        {% elif grupo.grouper == 'Bodega' %}
+                                            <i class="fas fa-warehouse me-2"></i>
+                                        {% elif grupo.grouper == 'Vitrina' %}
+                                            <i class="fas fa-store me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-box me-2"></i>
+                                        {% endif %}
+                                        {{ grupo.grouper }}
+                                    </h5>
+                                    <small class="opacity-75">{{ grupo.list|length }} ubicaciones</small>
+                                </div>
+                                <div class="zona-tabs">
+                                    <button class="btn btn-sm btn-outline-light" onclick="toggleZona('{{ grupo.grouper|slugify }}')">
+                                        <i class="fas fa-eye" id="icon-{{ grupo.grouper|slugify }}"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="zona-content" id="zona-{{ grupo.grouper|slugify }}">
+                            <div class="grid-{{ grupo.grouper|lower|cut:' ' }}">
+                                {% for ubicacion in grupo.list %}
+                                <div class="ubicacion-item 
+                                    {% if not ubicacion.activa %}inactiva
+                                    {% elif ubicacion.esta_llena %}llena
+                                    {% elif ubicacion.necesita_atencion %}atencion
+                                    {% else %}activa{% endif %}"
+                                    data-ubicacion-id="{{ ubicacion.id }}"
+                                    data-codigo="{{ ubicacion.codigo|lower }}"
+                                    data-nombre="{{ ubicacion.nombre|lower }}"
+                                    onclick="verDetalleUbicacion({{ ubicacion.id }})">
+                                    
+                                    <div>
+                                        <div class="ubicacion-codigo">{{ ubicacion.codigo }}</div>
+                                        <div class="ubicacion-tipo">{{ ubicacion.get_tipo_display }}</div>
+                                        <div class="fw-bold text-primary">{{ ubicacion.nombre }}</div>
+                                    </div>
+
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="text-muted">{{ ubicacion.get_productos_count }} productos</small>
+                                            <span class="badge 
+                                                {% if not ubicacion.activa %}bg-danger
+                                                {% elif ubicacion.esta_llena %}bg-warning
+                                                {% elif ubicacion.necesita_atencion %}bg-info
+                                                {% else %}bg-success{% endif %} small">
+                                                {% if not ubicacion.activa %}
+                                                    Inactiva
+                                                {% elif ubicacion.esta_llena %}
+                                                    Llena
+                                                {% elif ubicacion.necesita_atencion %}
+                                                    Atención
+                                                {% else %}
+                                                    Activa
+                                                {% endif %}
+                                            </span>
+                                        </div>
+
+                                        {% if ubicacion.capacidad_maxima %}
+                                            <div class="ocupacion-bar">
+                                                <div class="ocupacion-fill 
+                                                    {% if ubicacion.get_porcentaje_ocupacion >= 90 %}bg-danger
+                                                    {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}bg-warning
+                                                    {% else %}bg-success{% endif %}"
+                                                    style="width: {{ ubicacion.get_porcentaje_ocupacion }}%">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ ubicacion.get_capacidad_usada }}/{{ ubicacion.capacidad_maxima }} 
+                                                ({{ ubicacion.get_porcentaje_ocupacion }}%)
+                                            </small>
+                                        {% else %}
+                                            <div class="ocupacion-bar">
+                                                <div class="ocupacion-fill bg-info" style="width: 50%"></div>
+                                            </div>
+                                            <small class="text-muted">Capacidad ilimitada</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Vista Grid (todas las ubicaciones) -->
+                <div id="vista-grid-content" style="display: none;">
+                    <div class="row">
+                        {% for ubicacion in ubicaciones %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                            <div class="ubicacion-item h-100
+                                {% if not ubicacion.activa %}inactiva
+                                {% elif ubicacion.esta_llena %}llena
+                                {% elif ubicacion.necesita_atencion %}atencion
+                                {% else %}activa{% endif %}"
+                                data-ubicacion-id="{{ ubicacion.id }}"
+                                data-codigo="{{ ubicacion.codigo|lower }}"
+                                data-nombre="{{ ubicacion.nombre|lower }}"
+                                onclick="verDetalleUbicacion({{ ubicacion.id }})">
+                                
+                                <div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        {% if ubicacion.tipo == 'estanteria' %}
+                                            <i class="fas fa-th-large text-primary me-2"></i>
+                                        {% elif ubicacion.tipo == 'bodega' %}
+                                            <i class="fas fa-warehouse text-success me-2"></i>
+                                        {% elif ubicacion.tipo == 'vitrina' %}
+                                            <i class="fas fa-store text-info me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-box text-warning me-2"></i>
+                                        {% endif %}
+                                        <div class="ubicacion-codigo">{{ ubicacion.codigo }}</div>
+                                    </div>
+                                    <div class="fw-bold">{{ ubicacion.nombre }}</div>
+                                    <div class="ubicacion-tipo">{{ ubicacion.get_tipo_display }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted">{{ ubicacion.get_productos_count }} productos</small>
+                                        <span class="badge 
+                                            {% if not ubicacion.activa %}bg-danger
+                                            {% elif ubicacion.esta_llena %}bg-warning
+                                            {% elif ubicacion.necesita_atencion %}bg-info
+                                            {% else %}bg-success{% endif %} small">
+                                            {{ ubicacion.get_porcentaje_ocupacion }}%
+                                        </span>
+                                    </div>
+
+                                    {% if ubicacion.capacidad_maxima %}
+                                        <div class="ocupacion-bar">
+                                            <div class="ocupacion-fill 
+                                                {% if ubicacion.get_porcentaje_ocupacion >= 90 %}bg-danger
+                                                {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}bg-warning
+                                                {% else %}bg-success{% endif %}"
+                                                style="width: {{ ubicacion.get_porcentaje_ocupacion }}%">
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Vista Lista -->
+                <div id="vista-lista-content" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Tipo</th>
+                                    <th>Estado</th>
+                                    <th>Productos</th>
+                                    <th>Capacidad</th>
+                                    <th>Ocupación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ubicacion in ubicaciones %}
+                                <tr data-ubicacion-id="{{ ubicacion.id }}"
+                                    data-codigo="{{ ubicacion.codigo|lower }}"
+                                    data-nombre="{{ ubicacion.nombre|lower }}">
+                                    <td>
+                                        <strong>{{ ubicacion.codigo }}</strong>
+                                    </td>
+                                    <td>{{ ubicacion.nombre }}</td>
+                                    <td>
+                                        {% if ubicacion.tipo == 'estanteria' %}
+                                            <i class="fas fa-th-large text-primary me-1"></i>
+                                        {% elif ubicacion.tipo == 'bodega' %}
+                                            <i class="fas fa-warehouse text-success me-1"></i>
+                                        {% elif ubicacion.tipo == 'vitrina' %}
+                                            <i class="fas fa-store text-info me-1"></i>
+                                        {% else %}
+                                            <i class="fas fa-box text-warning me-1"></i>
+                                        {% endif %}
+                                        {{ ubicacion.get_tipo_display }}
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if not ubicacion.activa %}bg-danger
+                                            {% elif ubicacion.esta_llena %}bg-warning
+                                            {% elif ubicacion.necesita_atencion %}bg-info
+                                            {% else %}bg-success{% endif %}">
+                                            {% if not ubicacion.activa %}
+                                                Inactiva
+                                            {% elif ubicacion.esta_llena %}
+                                                Llena
+                                            {% elif ubicacion.necesita_atencion %}
+                                                Atención
+                                            {% else %}
+                                                Activa
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ ubicacion.get_productos_count }}</td>
+                                    <td>
+                                        {% if ubicacion.capacidad_maxima %}
+                                            {{ ubicacion.get_capacidad_usada }}/{{ ubicacion.capacidad_maxima }}
+                                        {% else %}
+                                            ∞
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar 
+                                                    {% if ubicacion.get_porcentaje_ocupacion >= 90 %}bg-danger
+                                                    {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}bg-warning
+                                                    {% else %}bg-success{% endif %}"
+                                                    style="width: {{ ubicacion.get_porcentaje_ocupacion }}%">
+                                                </div>
+                                            </div>
+                                            <small>{{ ubicacion.get_porcentaje_ocupacion }}%</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-primary" onclick="verDetalleUbicacion({{ ubicacion.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="{% url 'editar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-outline-secondary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'asignar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-outline-success">
+                                                <i class="fas fa-boxes"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-3">
+            <!-- Leyenda -->
+            <div class="leyenda mb-3">
+                <h6><i class="fas fa-info-circle me-2"></i>Leyenda</h6>
+                
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="border-color: #28a745; background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);"></div>
+                    <small>Activa</small>
+                </div>
+                
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="border-color: #ffc107; background: linear-gradient(135deg, #ffffff 0%, #fffef8 100%);"></div>
+                    <small>Llena</small>
+                </div>
+                
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="border-color: #fd7e14; background: linear-gradient(135deg, #ffffff 0%, #fff9f6 100%);"></div>
+                    <small>Atención</small>
+                </div>
+                
+                <div class="leyenda-item">
+                    <div class="leyenda-color" style="border-color: #dc3545; background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%); opacity: 0.7;"></div>
+                    <small>Inactiva</small>
+                </div>
+            </div>
+
+            <!-- Estadísticas Detalladas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Estadísticas por Tipo</h6>
+                </div>
+                <div class="card-body">
+                    {% regroup ubicaciones by get_tipo_display as stats_por_tipo %}
+                    {% for tipo in stats_por_tipo %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            {% if tipo.grouper == 'Estantería' %}
+                                <i class="fas fa-th-large text-primary me-1"></i>
+                            {% elif tipo.grouper == 'Bodega' %}
+                                <i class="fas fa-warehouse text-success me-1"></i>
+                            {% elif tipo.grouper == 'Vitrina' %}
+                                <i class="fas fa-store text-info me-1"></i>
+                            {% else %}
+                                <i class="fas fa-box text-warning me-1"></i>
+                            {% endif %}
+                            <small>{{ tipo.grouper }}</small>
+                        </div>
+                        <span class="badge bg-secondary">{{ tipo.list|length }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'crear_ubicacion' sucursal_id=sucursal_actual.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Nueva Ubicación
+                        </a>
+                        <a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-list me-1"></i>Vista Lista
+                        </a>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="exportarMapa()">
+                            <i class="fas fa-download me-1"></i>Exportar Mapa
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="imprimirMapa()">
+                            <i class="fas fa-print me-1"></i>Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Selector de vista
+    const vistaRadios = document.querySelectorAll('input[name="vista"]');
+    const vistaZonas = document.getElementById('vista-zonas');
+    const vistaGrid = document.getElementById('vista-grid-content');
+    const vistaLista = document.getElementById('vista-lista-content');
+    
+    vistaRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Ocultar todas las vistas
+            vistaZonas.style.display = 'none';
+            vistaGrid.style.display = 'none';
+            vistaLista.style.display = 'none';
+            
+            // Mostrar vista seleccionada
+            if (this.id === 'vista-zona') {
+                vistaZonas.style.display = 'block';
+            } else if (this.id === 'vista-grid') {
+                vistaGrid.style.display = 'block';
+            } else if (this.id === 'vista-lista') {
+                vistaLista.style.display = 'block';
+            }
+        });
+    });
+    
+    // Búsqueda en tiempo real
+    const busqueda = document.getElementById('buscarUbicacion');
+    busqueda.addEventListener('input', function() {
+        const termino = this.value.toLowerCase();
+        const ubicaciones = document.querySelectorAll('[data-ubicacion-id]');
+        
+        ubicaciones.forEach(ubicacion => {
+            const codigo = ubicacion.getAttribute('data-codigo') || '';
+            const nombre = ubicacion.getAttribute('data-nombre') || '';
+            
+            if (codigo.includes(termino) || nombre.includes(termino)) {
+                ubicacion.style.display = '';
+                
+                // Resaltar término encontrado
+                if (termino) {
+                    ubicacion.style.border = '2px solid #007bff';
+                    ubicacion.style.boxShadow = '0 0 10px rgba(0,123,255,0.3)';
+                } else {
+                    // Restaurar estilo original
+                    ubicacion.style.border = '';
+                    ubicacion.style.boxShadow = '';
+                }
+            } else {
+                ubicacion.style.display = 'none';
+            }
+        });
+        
+        // Ocultar zonas vacías
+        const zonasContainer = document.querySelectorAll('.zona-container');
+        zonasContainer.forEach(zona => {
+            const ubicacionesVisibles = zona.querySelectorAll('[data-ubicacion-id]:not([style*="display: none"])');
+            zona.style.display = ubicacionesVisibles.length > 0 ? 'block' : 'none';
+        });
+    });
+});
+
+function toggleZona(tipoZona) {
+    const zona = document.getElementById(`zona-${tipoZona}`);
+    const icon = document.getElementById(`icon-${tipoZona}`);
+    
+    if (zona.style.display === 'none') {
+        zona.style.display = 'block';
+        icon.className = 'fas fa-eye';
+    } else {
+        zona.style.display = 'none';
+        icon.className = 'fas fa-eye-slash';
+    }
+}
+
+function verDetalleUbicacion(ubicacionId) {
+    const sucursalId = {{ sucursal_actual.id }};
+    window.location.href = `/sucursales/${sucursalId}/ubicaciones/${ubicacionId}/`;
+}
+
+function exportarMapa() {
+    // Implementar exportación del mapa
+    alert('Función de exportar mapa - próximamente');
+}
+
+function imprimirMapa() {
+    // Preparar para impresión
+    const originalTitle = document.title;
+    document.title = `Mapa de Ubicaciones - {{ sucursal_actual.nombre }}`;
+    
+    // Ocultar elementos no necesarios para impresión
+    const elementosOcultar = [
+        '.vista-selector',
+        '.stats-overlay',
+        'nav',
+        '.btn-group',
+        '.dropdown'
+    ];
+    
+    elementosOcultar.forEach(selector => {
+        const elementos = document.querySelectorAll(selector);
+        elementos.forEach(el => el.style.display = 'none');
+    });
+    
+    // Imprimir
+    window.print();
+    
+    // Restaurar elementos después de imprimir
+    setTimeout(() => {
+        elementosOcultar.forEach(selector => {
+            const elementos = document.querySelectorAll(selector);
+            elementos.forEach(el => el.style.display = '');
+        });
+        document.title = originalTitle;
+    }, 1000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+            case 'f':
+                e.preventDefault();
+                document.getElementById('buscarUbicacion').focus();
+                break;
+            case 'p':
+                e.preventDefault();
+                imprimirMapa();
+                break;
+            case '1':
+                e.preventDefault();
+                document.getElementById('vista-zona').checked = true;
+                document.getElementById('vista-zona').dispatchEvent(new Event('change'));
+                break;
+            case '2':
+                e.preventDefault();
+                document.getElementById('vista-grid').checked = true;
+                document.getElementById('vista-grid').dispatchEvent(new Event('change'));
+                break;
+            case '3':
+                e.preventDefault();
+                document.getElementById('vista-lista').checked = true;
+                document.getElementById('vista-lista').dispatchEvent(new Event('change'));
+                break;
+        }
+    }
+});
+</script>
+{% endblock %}

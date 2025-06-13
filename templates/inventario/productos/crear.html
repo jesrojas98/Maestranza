@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Producto - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Crear Nuevo Producto{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'lista_productos' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver a Productos
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .imagen-preview {
+        max-width: 200px;
+        max-height: 200px;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        background-color: #f8f9fa;
+    }
+    .imagen-preview img {
+        max-width: 100%;
+        max-height: 180px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    .imagen-upload-area {
+        border: 2px dashed #007bff;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .imagen-upload-area:hover {
+        background-color: #e9ecef;
+        border-color: #0056b3;
+    }
+    .imagen-upload-area.dragover {
+        background-color: #e7f3ff;
+        border-color: #0056b3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-plus-circle"></i> Información del Producto
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="formCrearProducto">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.codigo.id_for_label }}" class="form-label">
+                                    <i class="bi bi-upc-scan"></i> Código *
+                                </label>
+                                {{ form.codigo }}
+                                {% if form.codigo.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.codigo.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Código único identificador del producto</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.categoria.id_for_label }}" class="form-label">
+                                    <i class="bi bi-tags"></i> Categoría
+                                </label>
+                                {{ form.categoria }}
+                                {% if form.categoria.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.categoria.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                            <i class="bi bi-box"></i> Nombre del Producto *
+                        </label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.nombre.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label">
+                            <i class="bi bi-card-text"></i> Descripción
+                        </label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.descripcion.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Descripción detallada del producto</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.unidad_medida.id_for_label }}" class="form-label">
+                                    <i class="bi bi-rulers"></i> Unidad de Medida
+                                </label>
+                                {{ form.unidad_medida }}
+                                {% if form.unidad_medida.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.unidad_medida.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Ej: unidad, metro, kilogramo, litro</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.stock_minimo.id_for_label }}" class="form-label">
+                                    <i class="bi bi-exclamation-triangle"></i> Stock Mínimo
+                                </label>
+                                {{ form.stock_minimo }}
+                                {% if form.stock_minimo.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.stock_minimo.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Cantidad mínima antes de generar alerta</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos adicionales si los tienes (etiquetas, lotes, vencimiento) -->
+                    {% if form.etiquetas %}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-tags"></i> Etiquetas
+                        </label>
+                        {{ form.etiquetas }}
+                        {% if form.etiquetas.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.etiquetas.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if form.maneja_lotes or form.maneja_vencimiento %}
+                    <div class="row mb-3">
+                        {% if form.maneja_lotes %}
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                {{ form.maneja_lotes }}
+                                <label class="form-check-label" for="{{ form.maneja_lotes.id_for_label }}">
+                                    <i class="bi bi-boxes"></i> Maneja Lotes
+                                </label>
+                                <div class="form-text">El producto se gestiona por lotes</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if form.maneja_vencimiento %}
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                {{ form.maneja_vencimiento }}
+                                <label class="form-check-label" for="{{ form.maneja_vencimiento.id_for_label }}">
+                                    <i class="bi bi-calendar-x"></i> Maneja Vencimiento
+                                </label>
+                                <div class="form-text">El producto tiene fecha de vencimiento</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.activo }}
+                            <label class="form-check-label" for="{{ form.activo.id_for_label }}">
+                                <i class="bi bi-check-circle"></i> Producto activo
+                            </label>
+                            <div class="form-text">Los productos inactivos no aparecen en las listas principales</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Crear Producto
+                        </button>
+                        <a href="{% url 'lista_productos' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panel de Imagen -->
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-image"></i> Imagen del Producto
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Área de Upload -->
+                <div class="imagen-upload-area mb-3" id="uploadArea">
+                    <div id="uploadText">
+                        <i class="bi bi-cloud-upload display-4 text-primary mb-2"></i>
+                        <p class="mb-2">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                        <small class="text-muted">JPG, PNG, GIF, WebP (máx. 5MB)</small>
+                    </div>
+                    <!-- Campo de imagen del formulario -->
+                    {% if form.imagen %}
+                        {{ form.imagen }}
+                    {% else %}
+                        <input type="file" 
+                               class="d-none" 
+                               id="imagen" 
+                               name="imagen" 
+                               accept="image/*">
+                    {% endif %}
+                </div>
+
+                <!-- Preview de Imagen -->
+                <div class="imagen-preview d-none" id="imagePreview">
+                    <img id="previewImg" src="" alt="Preview">
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
+                            <i class="bi bi-trash"></i> Quitar imagen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Información -->
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <small>
+                        <strong>Recomendaciones:</strong><br>
+                        • Usar imágenes cuadradas (500x500px)<br>
+                        • Fondo blanco o transparente<br>
+                        • Formato JPG para mejor compresión
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Información Importante
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb"></i> Consejos:</h6>
+                    <ul class="mb-0 small">
+                        <li>El código debe ser único en todo el sistema</li>
+                        <li>Usa códigos descriptivos (ej: MART001, TALAD001)</li>
+                        <li>La categoría ayuda a organizar y filtrar productos</li>
+                        <li>El stock mínimo genera alertas automáticas</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-gear"></i> Después de crear:</h6>
+                    <ul class="mb-0 small">
+                        <li>Se creará inventario automáticamente en todas las sucursales</li>
+                        <li>Podrás registrar movimientos de entrada/salida</li>
+                        <li>Si configuraste stock mínimo, recibirás alertas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-plus-square"></i> Acciones Rápidas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'crear_categoria' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-tags"></i> Nueva Categoría
+                    </a>
+                    <a href="{% url 'crear_proveedor' %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-truck"></i> Nuevo Proveedor
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Funcionalidad existente de auto-generación de código
+    const nombreField = document.getElementById('{{ form.nombre.id_for_label }}');
+    const codigoField = document.getElementById('{{ form.codigo.id_for_label }}');
+    
+    if (nombreField && codigoField) {
+        nombreField.addEventListener('input', function() {
+            const nombre = this.value;
+            
+            if (!codigoField.value && nombre.length > 2) {
+                // Generar código sugerido
+                const codigo = nombre.substring(0, 4).toUpperCase().replace(/[^A-Z]/g, '') + '001';
+                codigoField.placeholder = `Sugerencia: ${codigo}`;
+            }
+        });
+
+        // Validación en tiempo real
+        codigoField.addEventListener('input', function() {
+            const codigo = this.value;
+            if (codigo.length > 0 && !/^[A-Z0-9]+$/.test(codigo)) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+
+    // Nueva funcionalidad de manejo de imágenes
+    const uploadArea = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('{% if form.imagen %}{{ form.imagen.id_for_label }}{% else %}imagen{% endif %}');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const uploadText = document.getElementById('uploadText');
+
+    if (uploadArea && imageInput) {
+        // Hacer visible el input file si está oculto por Django
+        if (imageInput.style.display === 'none' || imageInput.classList.contains('d-none')) {
+            imageInput.classList.remove('d-none');
+            imageInput.style.display = 'none'; // Mantenerlo oculto pero accesible
+        }
+
+        // Click en área de upload
+        uploadArea.addEventListener('click', function() {
+            imageInput.click();
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageUpload(files[0]);
+            }
+        });
+
+        // Cambio en input file
+        imageInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleImageUpload(e.target.files[0]);
+            }
+        });
+
+        function handleImageUpload(file) {
+            // Validar tipo de archivo
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                alert('Formato de archivo no válido. Use JPG, PNG, GIF o WebP.');
+                return;
+            }
+
+            // Validar tamaño (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('La imagen es demasiado grande. Máximo 5MB.');
+                return;
+            }
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                uploadText.style.display = 'none';
+                imagePreview.classList.remove('d-none');
+                uploadArea.style.border = '2px solid #28a745';
+                uploadArea.style.backgroundColor = '#f8fff9';
+            };
+            reader.readAsDataURL(file);
+
+            // Crear un nuevo input file con el archivo seleccionado
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            imageInput.files = dataTransfer.files;
+        }
+    }
+});
+
+function removeImage() {
+    const imageInput = document.getElementById('{% if form.imagen %}{{ form.imagen.id_for_label }}{% else %}imagen{% endif %}');
+    const imagePreview = document.getElementById('imagePreview');
+    const uploadText = document.getElementById('uploadText');
+    const uploadArea = document.getElementById('uploadArea');
+
+    if (imageInput) imageInput.value = '';
+    if (imagePreview) imagePreview.classList.add('d-none');
+    if (uploadText) uploadText.style.display = 'block';
+    if (uploadArea) {
+        uploadArea.style.border = '2px dashed #007bff';
+        uploadArea.style.backgroundColor = '#f8f9fa';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+
+{% block title %}Lote {{ lote.codigo }} - {{ producto.nombre }}{% endblock %}
+
+{% block page_title %}Detalle del Lote {{ lote.codigo }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'lista_lotes' producto.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver a Lotes
+    </a>
+    <a href="{% url 'editar_lote' lote.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-pencil"></i> Editar
+    </a>
+    <a href="{% url 'movimiento_inventario' producto.id %}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Nuevo Movimiento
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Información principal del lote -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box-seam"></i> Información del Lote
+                </h5>
+                {% if lote.esta_vencido %}
+                    <span class="badge bg-danger">Vencido</span>
+                {% elif lote.dias_vencimiento and lote.dias_vencimiento <= 7 %}
+                    <span class="badge bg-danger">Crítico</span>
+                {% elif lote.dias_vencimiento and lote.dias_vencimiento <= 30 %}
+                    <span class="badge bg-warning text-dark">Por vencer</span>
+                {% else %}
+                    <span class="badge bg-success">Vigente</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Código:</dt>
+                    <dd class="col-sm-8"><code class="fs-6">{{ lote.codigo }}</code></dd>
+                    
+                    <dt class="col-sm-4">Producto:</dt>
+                    <dd class="col-sm-8">
+                        <a href="{% url 'detalle_producto' producto.id %}" class="text-decoration-none">
+                            {{ producto.nombre }}
+                        </a>
+                        <br><small class="text-muted">{{ producto.codigo }}</small>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Proveedor:</dt>
+                    <dd class="col-sm-8">
+                        </dd>
+                    
+                    <dt class="col-sm-4">Precio:</dt>
+                    <dd class="col-sm-8">
+                        <strong>${{ lote.precio_compra }}</strong>
+                        <br><small class="text-muted">por {{ producto.unidad_medida }}</small>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Comprado:</dt>
+                    <dd class="col-sm-8">{{ lote.fecha_compra|date:"d/m/Y H:i" }}</dd>
+                    
+                    {% if lote.fecha_vencimiento %}
+                    <dt class="col-sm-4">Vencimiento:</dt>
+                    <dd class="col-sm-8">
+                        {{ lote.fecha_vencimiento|date:"d/m/Y" }}
+                        {% if lote.esta_vencido %}
+                            <br><span class="badge bg-danger">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Vencido hace {{ lote.dias_vencimiento|add:"-1"|default:"0" }} días
+                            </span>
+                        {% elif lote.dias_vencimiento <= 7 %}
+                            <br><span class="badge bg-danger">
+                                <i class="bi bi-clock-fill"></i> Vence en {{ lote.dias_vencimiento }} días
+                            </span>
+                        {% elif lote.dias_vencimiento <= 30 %}
+                            <br><span class="badge bg-warning text-dark">
+                                <i class="bi bi-clock"></i> Vence en {{ lote.dias_vencimiento }} días
+                            </span>
+                        {% else %}
+                            <br><span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> {{ lote.dias_vencimiento }} días restantes
+                            </span>
+                        {% endif %}
+                    </dd>
+                    {% endif %}
+                </dl>
+                
+                {% if producto.categoria %}
+                <div class="mt-3">
+                    <small class="text-muted">Categoría:</small><br>
+                    <span class="badge" style="background-color: {{ producto.categoria.color }}">
+                        {{ producto.categoria.nombre }}
+                    </span>
+                </div>
+                {% endif %}
+                
+                {% if producto.etiquetas.all %}
+                <div class="mt-3">
+                    <small class="text-muted">Etiquetas:</small><br>
+                    {% for etiqueta in producto.etiquetas.all %}
+                        <span class="badge me-1" style="background-color: {{ etiqueta.color }}">
+                            {{ etiqueta.nombre }}
+                        </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Alertas relacionadas -->
+        {% if lote.esta_vencido or lote.dias_vencimiento <= 30 %}
+        <div class="card mt-3 {% if lote.esta_vencido %}border-danger{% else %}border-warning{% endif %}">
+            <div class="card-header {% if lote.esta_vencido %}bg-danger text-white{% else %}bg-warning text-dark{% endif %}">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle-fill"></i> 
+                    {% if lote.esta_vencido %}Producto Vencido{% else %}Próximo Vencimiento{% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if lote.esta_vencido %}
+                    <div class="alert alert-danger">
+                        <strong>¡Atención!</strong> Este lote está vencido desde hace {{ lote.dias_vencimiento|add:"-1"|default:"0" }} días. 
+                        Se recomienda revisar el stock y considerar su retiro.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <strong>Advertencia:</strong> Este lote vence en {{ lote.dias_vencimiento }} días. 
+                        Considere priorizar su salida o implementar estrategias de rotación.
+                    </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'alertas_stock' %}?tipo={% if lote.esta_vencido %}vencido{% else %}vencimiento{% endif %}" 
+                       class="btn btn-outline-{% if lote.esta_vencido %}danger{% else %}warning{% endif %} btn-sm">
+                        <i class="bi bi-list"></i> Ver Todas las Alertas
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Movimientos del lote -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-left-right"></i> Movimientos del Lote
+                </h5>
+                <a href="{% url 'movimiento_inventario' producto.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-circle"></i> Nuevo Movimiento
+                </a>
+            </div>
+            <div class="card-body">
+                {% if movimientos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Sucursal</th>
+                                    <th>Cantidad</th>
+                                    <th>Stock</th>
+                                    <th>Usuario</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movimiento in movimientos %}
+                                <tr>
+                                    <td>
+                                        <div>{{ movimiento.fecha|date:"d/m/Y" }}</div>
+                                        <small class="text-muted">{{ movimiento.fecha|time:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                        {% if movimiento.tipo == 'entrada' %}bg-success
+                                        {% elif movimiento.tipo == 'salida' %}bg-danger
+                                        {% elif movimiento.tipo == 'transferencia' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                            {{ movimiento.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{ movimiento.sucursal.nombre }}
+                                        {% if movimiento.sucursal_destino %}
+                                            <br><small class="text-muted">
+                                                <i class="bi bi-arrow-right"></i> {{ movimiento.sucursal_destino.nombre }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold {% if movimiento.tipo == 'entrada' %}text-success{% elif movimiento.tipo == 'salida' %}text-danger{% endif %}">
+                                            {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' %}-{% endif %}{{ movimiento.cantidad }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ movimiento.cantidad_anterior }}</small>
+                                        <i class="bi bi-arrow-right text-muted"></i>
+                                        <strong>{{ movimiento.cantidad_nueva }}</strong>
+                                    </td>
+                                    <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
+                                    <td>
+                                        {% if movimiento.motivo %}
+                                            {{ movimiento.motivo|truncatechars:30 }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        {% if movimiento.numero_documento %}
+                                            <br><small class="text-muted">Doc: {{ movimiento.numero_documento }}</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Resumen de movimientos -->
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6 class="text-success">
+                                    {% for mov in movimientos %}
+                                        {% if mov.tipo == 'entrada' %}{{ forloop.counter }}{% endif %}
+                                    {% endfor %}
+                                </h6>
+                                <small class="text-muted">Entradas</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6 class="text-danger">
+                                    {% for mov in movimientos %}
+                                        {% if mov.tipo == 'salida' %}{{ forloop.counter }}{% endif %}
+                                    {% endfor %}
+                                </h6>
+                                <small class="text-muted">Salidas</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6 class="text-info">
+                                    {% for mov in movimientos %}
+                                        {% if mov.tipo == 'transferencia' %}{{ forloop.counter }}{% endif %}
+                                    {% endfor %}
+                                </h6>
+                                <small class="text-muted">Transferencias</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-clock-history text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">No hay movimientos registrados</h5>
+                        <p class="text-muted">Este lote aún no tiene movimientos de inventario asociados.</p>
+                        <a href="{% url 'movimiento_inventario' producto.id %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Registrar Primer Movimiento
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock actual por sucursal -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-building"></i> Stock del Producto por Sucursal
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for inventario in producto.inventario_set.all %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ inventario.sucursal.nombre }}</h5>
+                                <h2 class="{% if inventario.necesita_reposicion %}text-danger{% elif inventario.cantidad == 0 %}text-secondary{% else %}text-success{% endif %}">
+                                    {{ inventario.cantidad }}
+                                </h2>
+                                <p class="card-text">
+                                    <small class="text-muted">{{ producto.unidad_medida }}</small>
+                                    {% if inventario.ubicacion %}
+                                        <br><small class="text-muted">{{ inventario.ubicacion }}</small>
+                                    {% endif %}
+                                </p>
+                                {% if inventario.necesita_reposicion %}
+                                    <span class="badge bg-warning text-dark">Stock Bajo</span>
+                                {% elif inventario.cantidad == 0 %}
+                                    <span class="badge bg-secondary">Sin Stock</span>
+                                {% else %}
+                                    <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-3">
+                    <h4 class="text-primary">
+                        Stock Total: {{ producto.get_stock_total }} {{ producto.unidad_medida }}
+                    </h4>
+                    <small class="text-muted">Mínimo requerido: {{ producto.stock_minimo }} {{ producto.unidad_medida }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Actualizar página cada 5 minutos para mantener información actualizada
+setTimeout(function() {
+    if (document.visibilityState === 'visible') {
+        location.reload();
+    }
+}, 300000); // 5 minutos
+
+// Destacar movimientos recientes (últimas 24 horas)
+document.addEventListener('DOMContentLoaded', function() {
+    const ahora = new Date();
+    const hace24h = new Date(ahora.getTime() - (24 * 60 * 60 * 1000));
+    
+    document.querySelectorAll('tbody tr').forEach(function(row) {
+        const fechaTexto = row.querySelector('td').textContent.trim();
+        // Aquí podrías implementar lógica para destacar movimientos recientes
+        // por simplicidad, no implementamos el parsing de fecha
+    });
+});
+
+// Mostrar tooltip con información adicional
+document.querySelectorAll('[title]').forEach(function(element) {
+    element.addEventListener('mouseenter', function() {
+        // Aquí podrías agregar tooltips personalizados
+    });
+});
+</script>
+{% endblock %}

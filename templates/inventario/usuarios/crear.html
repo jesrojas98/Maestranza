@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.role-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.role-card {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: background 0.3s;
+}
+
+.role-card:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.password-strength {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    transition: all 0.3s;
+}
+
+.preview-card {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+
+.avatar-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 18px;
+    margin: 0 auto 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-plus me-2"></i>{{ titulo }}</h2>
+            <p class="text-muted mb-0">Complete la información del nuevo usuario</p>
+        </div>
+        <div>
+            <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Información de Roles -->
+    <div class="role-info">
+        <h5><i class="fas fa-info-circle me-2"></i>Roles del Sistema</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="role-card">
+                    <h6><i class="fas fa-crown me-2"></i>Administrador</h6>
+                    <small>Control total del sistema. Puede crear usuarios, gestionar configuraciones y acceder a todas las funcionalidades.</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="role-card">
+                    <h6><i class="fas fa-cogs me-2"></i>Gestor de Inventario</h6>
+                    <small>Puede gestionar productos, inventario, ubicaciones, movimientos y alertas. No puede crear usuarios.</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="role-card">
+                    <h6><i class="fas fa-eye me-2"></i>Usuario (Solo Lectura)</h6>
+                    <small>Solo puede visualizar información y descargar reportes. No puede crear ni modificar datos.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario -->
+        <div class="col-lg-8">
+            <div class="card form-card">
+                <div class="card-body p-4">
+                    <form method="post" id="createUserForm">
+                        {% csrf_token %}
+                        
+                        <!-- Información Personal -->
+                        <div class="mb-4">
+                            <h5 class="text-primary"><i class="fas fa-user me-2"></i>Información Personal</h5>
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                        Nombre <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                        Apellido <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">
+                                        Nombre de Usuario <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.username }}
+                                    <div class="form-text">{{ form.username.help_text }}</div>
+                                    {% if form.username.errors %}
+                                        <div class="text-danger small">{{ form.username.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                        Correo Electrónico <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.email }}
+                                    <div class="form-text">{{ form.email.help_text }}</div>
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seguridad -->
+                        <div class="mb-4">
+                            <h5 class="text-primary"><i class="fas fa-lock me-2"></i>Seguridad</h5>
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.password.id_for_label }}" class="form-label">
+                                        Contraseña <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.password }}
+                                    <div class="password-strength bg-secondary" id="passwordStrength"></div>
+                                    <div class="form-text">{{ form.password.help_text }}</div>
+                                    {% if form.password.errors %}
+                                        <div class="text-danger small">{{ form.password.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.password_confirm.id_for_label }}" class="form-label">
+                                        Confirmar Contraseña <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.password_confirm }}
+                                    <div class="form-text">Repita la contraseña</div>
+                                    {% if form.password_confirm.errors %}
+                                        <div class="text-danger small">{{ form.password_confirm.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración del Sistema -->
+                        <div class="mb-4">
+                            <h5 class="text-primary"><i class="fas fa-cog me-2"></i>Configuración del Sistema</h5>
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.rol.id_for_label }}" class="form-label">
+                                        Rol del Usuario <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.rol }}
+                                    <div class="form-text">{{ form.rol.help_text }}</div>
+                                    {% if form.rol.errors %}
+                                        <div class="text-danger small">{{ form.rol.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.sucursal_asignada.id_for_label }}" class="form-label">
+                                        Sucursal Asignada
+                                    </label>
+                                    {{ form.sucursal_asignada }}
+                                    <div class="form-text">{{ form.sucursal_asignada.help_text }}</div>
+                                    {% if form.sucursal_asignada.errors %}
+                                        <div class="text-danger small">{{ form.sucursal_asignada.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Errores generales -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Crear Usuario
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="col-lg-4">
+            <div class="preview-card">
+                <h6 class="text-center mb-3">Vista Previa del Usuario</h6>
+                
+                <!-- Avatar -->
+                <div class="avatar-preview bg-secondary" id="avatarPreview">
+                    ?
+                </div>
+                
+                <!-- Información -->
+                <div class="text-center">
+                    <h6 id="previewName">Nombre del Usuario</h6>
+                    <p class="text-muted small mb-2" id="previewUsername">@usuario</p>
+                    <p class="text-muted small mb-2" id="previewEmail">correo@ejemplo.com</p>
+                    
+                    <!-- Rol Badge -->
+                    <span class="badge bg-secondary" id="previewRole">Sin rol</span>
+                    
+                    <!-- Sucursal -->
+                    <div class="mt-2">
+                        <small class="text-muted" id="previewSucursal">Sin sucursal asignada</small>
+                    </div>
+                </div>
+
+                <!-- Permisos que tendrá -->
+                <div class="mt-3">
+                    <h6 class="small">Permisos que tendrá:</h6>
+                    <div id="permisosPreview">
+                        <small class="text-muted">Seleccione un rol para ver permisos</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6><i class="fas fa-lightbulb text-warning me-2"></i>Consejos</h6>
+                    <ul class="small mb-0">
+                        <li>Use nombres de usuario únicos y fáciles de recordar</li>
+                        <li>Las contraseñas deben ser seguras (8+ caracteres, letras y números)</li>
+                        <li>Asigne el rol según las responsabilidades del usuario</li>
+                        <li>La sucursal asignada será su ubicación principal de trabajo</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Permisos por rol
+    const rolePermissions = {
+        'administrador': [
+            'Acceso completo al sistema',
+            'Crear y gestionar usuarios',
+            'Configurar sucursales y categorías',
+            'Gestionar productos e inventario',
+            'Ver y resolver alertas',
+            'Descargar todos los reportes'
+        ],
+        'gestor_inventario': [
+            'Gestionar productos',
+            'Realizar movimientos de inventario',
+            'Asignar ubicaciones a productos',
+            'Ver y resolver alertas',
+            'Gestionar proveedores y lotes',
+            'Descargar reportes de inventario'
+        ],
+        'usuario_lectura': [
+            'Ver productos y stocks',
+            'Consultar información del inventario',
+            'Ver ubicaciones y mapas',
+            'Descargar reportes básicos',
+            'Solo lectura (no puede modificar)'
+        ]
+    };
+
+    const roleColors = {
+        'administrador': '#28a745',
+        'gestor_inventario': '#17a2b8',
+        'usuario_lectura': '#ffc107'
+    };
+
+    // Actualizar preview en tiempo real
+    function updatePreview() {
+        const firstName = $('#id_first_name').val() || '';
+        const lastName = $('#id_last_name').val() || '';
+        const username = $('#id_username').val() || 'usuario';
+        const email = $('#id_email').val() || 'correo@ejemplo.com';
+        const rol = $('#id_rol').val() || '';
+        const sucursal = $('#id_sucursal_asignada option:selected').text() || 'Sin sucursal asignada';
+
+        // Nombre completo
+        const fullName = firstName && lastName ? `${firstName} ${lastName}` : 'Nombre del Usuario';
+        $('#previewName').text(fullName);
+        $('#previewUsername').text(`@${username}`);
+        $('#previewEmail').text(email);
+
+        // Avatar
+        const initials = firstName && lastName ? 
+            `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}` : '?';
+        $('#avatarPreview').text(initials);
+
+        // Rol
+        if (rol) {
+            const rolDisplay = $('#id_rol option:selected').text();
+            $('#previewRole').text(rolDisplay)
+                .removeClass('bg-secondary bg-success bg-info bg-warning')
+                .addClass(rol === 'administrador' ? 'bg-success' : 
+                         rol === 'gestor_inventario' ? 'bg-info' : 'bg-warning');
+            
+            // Color del avatar
+            $('#avatarPreview').css('background-color', roleColors[rol] || '#6c757d');
+
+            // Permisos
+            const permissions = rolePermissions[rol] || [];
+            let permissionsHtml = permissions.map(p => `<small class="d-block"><i class="fas fa-check text-success me-1"></i>${p}</small>`).join('');
+            $('#permisosPreview').html(permissionsHtml);
+        } else {
+            $('#previewRole').text('Sin rol').removeClass().addClass('badge bg-secondary');
+            $('#avatarPreview').css('background-color', '#6c757d');
+            $('#permisosPreview').html('<small class="text-muted">Seleccione un rol para ver permisos</small>');
+        }
+
+        // Sucursal
+        $('#previewSucursal').text(sucursal === 'Sin sucursal específica' ? 'Sin sucursal asignada' : sucursal);
+    }
+
+    // Event listeners para actualizar preview
+    $('#id_first_name, #id_last_name, #id_username, #id_email, #id_rol, #id_sucursal_asignada').on('input change', updatePreview);
+
+    // Verificador de fortaleza de contraseña
+    $('#id_password').on('input', function() {
+        const password = $(this).val();
+        const strength = checkPasswordStrength(password);
+        const strengthBar = $('#passwordStrength');
+        
+        strengthBar.removeClass('bg-danger bg-warning bg-success bg-secondary');
+        
+        if (password.length === 0) {
+            strengthBar.addClass('bg-secondary').css('width', '0%');
+        } else if (strength < 2) {
+            strengthBar.addClass('bg-danger').css('width', '25%');
+        } else if (strength < 3) {
+            strengthBar.addClass('bg-warning').css('width', '50%');
+        } else if (strength < 4) {
+            strengthBar.addClass('bg-info').css('width', '75%');
+        } else {
+            strengthBar.addClass('bg-success').css('width', '100%');
+        }
+    });
+
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        return strength;
+    }
+
+    // Validación en tiempo real
+    $('#id_password_confirm').on('input', function() {
+        const password = $('#id_password').val();
+        const confirm = $(this).val();
+        
+        if (confirm && password !== confirm) {
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Inicializar preview
+    updatePreview();
+
+    // Envío del formulario
+    $('#createUserForm').on('submit', function(e) {
+        // Validaciones adicionales aquí si es necesario
+        const password = $('#id_password').val();
+        const confirm = $('#id_password_confirm').val();
+        
+        if (password !== confirm) {
+            e.preventDefault();
+            alert('Las contraseñas no coinciden.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

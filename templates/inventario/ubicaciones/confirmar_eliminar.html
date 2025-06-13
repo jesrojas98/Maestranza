@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Ubicación - {{ ubicacion.codigo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Confirmar Eliminación</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>¿Estás seguro de eliminar la ubicación "{{ ubicacion.codigo }}"?</strong>
+                    </div>
+                    
+                    <p>Esta acción no se puede deshacer.</p>
+                    
+                    {% if ubicacion.inventario_set.exists %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-boxes me-2"></i>
+                            <strong>Atención:</strong> Esta ubicación tiene {{ ubicacion.inventario_set.count }} productos asignados.
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Código:</strong> {{ ubicacion.codigo }}<br>
+                            <strong>Nombre:</strong> {{ ubicacion.nombre }}<br>
+                            <strong>Tipo:</strong> {{ ubicacion.get_tipo_display }}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'detalle_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-secondary">
+                            Cancelar
+                        </a>
+                        <form method="POST" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Eliminar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

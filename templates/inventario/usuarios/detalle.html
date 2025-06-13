@@ -1,0 +1,438 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ user_detalle.get_full_name|default:user_detalle.username }} - Detalles{% endblock %}
+
+{% block extra_css %}
+<style>
+.user-profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.user-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 36px;
+    margin: 0 auto 1rem;
+    background: rgba(255,255,255,0.2);
+    border: 4px solid rgba(255,255,255,0.3);
+}
+
+.stat-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: white;
+}
+
+.activity-item {
+    border-left: 3px solid #dee2e6;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.3s;
+}
+
+.activity-item:hover {
+    border-left-color: #007bff;
+}
+
+.permission-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2rem;
+    top: 0.5rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user me-2"></i>Detalles del Usuario</h2>
+            <p class="text-muted mb-0">Información completa y actividad del usuario</p>
+        </div>
+        <div>
+            <a href="{% url 'editar_usuario' user_detalle.id %}" class="btn btn-primary me-2">
+                <i class="fas fa-edit me-2"></i>Editar Usuario
+            </a>
+            <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Header del Perfil -->
+    <div class="user-profile-header">
+        <div class="user-avatar-large" style="background-color: {% if user_detalle.perfil.rol == 'administrador' %}#28a745{% elif user_detalle.perfil.rol == 'gestor_inventario' %}#17a2b8{% else %}#ffc107{% endif %}">
+            {{ user_detalle.first_name|first|default:user_detalle.username|first|upper }}{{ user_detalle.last_name|first|upper }}
+        </div>
+        <h3>{{ user_detalle.get_full_name|default:user_detalle.username }}</h3>
+        <p class="mb-2 opacity-75">@{{ user_detalle.username }}</p>
+        <p class="mb-3 opacity-75">{{ user_detalle.email|default:"Sin email configurado" }}</p>
+        
+        <div class="d-flex justify-content-center align-items-center gap-3">
+            <span class="badge {% if user_detalle.perfil.rol == 'administrador' %}bg-success{% elif user_detalle.perfil.rol == 'gestor_inventario' %}bg-info{% else %}bg-warning{% endif %} fs-6 px-3 py-2">
+                {{ user_detalle.perfil.get_rol_display }}
+            </span>
+            <span class="status-indicator {% if user_detalle.perfil.activo %}bg-success{% else %}bg-danger{% endif %}"></span>
+            <span>{% if user_detalle.perfil.activo %}Activo{% else %}Inactivo{% endif %}</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            <!-- Estadísticas -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-primary mx-auto mb-2">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <h4 class="mb-1">{{ stats.total_movimientos }}</h4>
+                            <small class="text-muted">Movimientos Realizados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-success mx-auto mb-2">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h4 class="mb-1">{{ stats.alertas_resueltas }}</h4>
+                            <small class="text-muted">Alertas Resueltas</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-info mx-auto mb-2">
+                                <i class="fas fa-boxes"></i>
+                            </div>
+                            <h4 class="mb-1">{{ stats.productos_creados }}</h4>
+                            <small class="text-muted">Productos Creados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="card-body text-center">
+                            <div class="stat-icon bg-warning mx-auto mb-2">
+                                <i class="fas fa-calendar"></i>
+                            </div>
+                            <h4 class="mb-1">{{ user_detalle.date_joined|timesince }}</h4>
+                            <small class="text-muted">En el Sistema</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actividad Reciente -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-history me-2"></i>Actividad Reciente</h5>
+                </div>
+                <div class="card-body">
+                    {% if movimientos_recientes %}
+                    <div class="timeline">
+                        {% for movimiento in movimientos_recientes %}
+                        <div class="timeline-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <span class="badge bg-{% if movimiento.tipo == 'entrada' %}success{% elif movimiento.tipo == 'salida' %}danger{% elif movimiento.tipo == 'transferencia' %}info{% else %}warning{% endif %} me-2">
+                                            {{ movimiento.get_tipo_display }}
+                                        </span>
+                                        {{ movimiento.producto.nombre }}
+                                    </h6>
+                                    <p class="text-muted mb-1">
+                                        <i class="fas fa-building me-1"></i>{{ movimiento.sucursal.nombre }}
+                                        <span class="mx-2">•</span>
+                                        Cantidad: {{ movimiento.cantidad }} {{ movimiento.producto.unidad_medida }}
+                                    </p>
+                                    {% if movimiento.motivo %}
+                                    <p class="small text-muted mb-0">
+                                        <i class="fas fa-comment me-1"></i>{{ movimiento.motivo }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ movimiento.fecha|date:"d/m H:i" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h5>Sin actividad reciente</h5>
+                        <p class="text-muted">Este usuario no ha realizado movimientos recientemente.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Información de Sesiones -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-desktop me-2"></i>Información de Acceso</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Primer Acceso</h6>
+                            <p class="text-muted">{{ user_detalle.date_joined|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Último Acceso</h6>
+                            {% if stats.ultimo_acceso %}
+                            <p class="text-muted">{{ stats.ultimo_acceso|date:"d/m/Y H:i" }}</p>
+                            <small class="text-muted">Hace {{ stats.ultimo_acceso|timesince }}</small>
+                            {% else %}
+                            <p class="text-muted">Nunca ha ingresado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Información del Perfil -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-id-card me-2"></i>Información del Perfil</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Rol:</strong>
+                        <span class="badge {% if user_detalle.perfil.rol == 'administrador' %}bg-success{% elif user_detalle.perfil.rol == 'gestor_inventario' %}bg-info{% else %}bg-warning{% endif %} ms-2">
+                            {{ user_detalle.perfil.get_rol_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Sucursal Asignada:</strong><br>
+                        <span class="text-muted">
+                            {% if user_detalle.perfil.sucursal_asignada %}
+                                <i class="fas fa-building me-1"></i>{{ user_detalle.perfil.sucursal_asignada.nombre }}
+                            {% else %}
+                                Sin sucursal específica
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Estado:</strong><br>
+                        <span class="badge {% if user_detalle.perfil.activo %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if user_detalle.perfil.activo %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-0">
+                        <strong>Creado por:</strong><br>
+                        <span class="text-muted">
+                            {% if user_detalle.perfil.creado_por %}
+                                <i class="fas fa-user me-1"></i>{{ user_detalle.perfil.creado_por.get_full_name|default:user_detalle.perfil.creado_por.username }}
+                            {% else %}
+                                Sistema
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permisos y Capacidades -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Permisos y Capacidades</h6>
+                </div>
+                <div class="card-body">
+                    <div class="permission-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{% if user_detalle.perfil.puede_gestionar_productos %}check text-success{% else %}times text-danger{% endif %} me-2"></i>
+                            <span>Gestionar Productos</span>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{% if user_detalle.perfil.puede_gestionar_inventario %}check text-success{% else %}times text-danger{% endif %} me-2"></i>
+                            <span>Gestionar Inventario</span>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{% if user_detalle.perfil.puede_asignar_ubicaciones %}check text-success{% else %}times text-danger{% endif %} me-2"></i>
+                            <span>Asignar Ubicaciones</span>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{% if user_detalle.perfil.puede_ver_alertas %}check text-success{% else %}times text-danger{% endif %} me-2"></i>
+                            <span>Ver y Gestionar Alertas</span>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{% if user_detalle.perfil.puede_crear_usuarios %}check text-success{% else %}times text-danger{% endif %} me-2"></i>
+                            <span>Crear Usuarios</span>
+                        </div>
+                    </div>
+                    
+                    <div class="permission-card">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Descargar Reportes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-tools me-2"></i>Acciones Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'editar_usuario' user_detalle.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit me-2"></i>Editar Usuario
+                        </a>
+                        
+                        {% if user_detalle != request.user %}
+                        <button class="btn btn-outline-warning btn-sm" onclick="toggleUserStatus()">
+                            <i class="fas fa-{% if user_detalle.perfil.activo %}ban{% else %}check{% endif %} me-2"></i>
+                            {% if user_detalle.perfil.activo %}Desactivar{% else %}Activar{% endif %}
+                        </button>
+                        
+                        <button class="btn btn-outline-info btn-sm" onclick="sendMessage()">
+                            <i class="fas fa-envelope me-2"></i>Enviar Mensaje
+                        </button>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportUserData()">
+                            <i class="fas fa-download me-2"></i>Exportar Datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleUserStatus() {
+    const userId = {{ user_detalle.id }};
+    const isActive = {{ user_detalle.perfil.activo|yesno:"true,false" }};
+    const action = isActive ? 'desactivar' : 'activar';
+    
+    if (confirm(`¿Está seguro que desea ${action} este usuario?`)) {
+        $.ajax({
+            url: `/usuarios/${userId}/toggle-activo/`,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('Error al procesar la solicitud.');
+            }
+        });
+    }
+}
+
+function sendMessage() {
+    // Implementar funcionalidad de mensajería
+    alert('Funcionalidad de mensajería - A implementar según necesidades');
+}
+
+function exportUserData() {
+    // Implementar exportación de datos del usuario
+    alert('Funcionalidad de exportación - A implementar según necesidades');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block title %}Movimientos de Inventario - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Movimientos de Inventario{% endblock %}
+
+{% block content %}
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="tipo" class="form-label">Tipo de Movimiento</label>
+                <select class="form-select" id="tipo" name="tipo">
+                    <option value="">Todos los tipos</option>
+                    {% for valor, etiqueta in tipos_movimiento %}
+                        <option value="{{ valor }}" {% if valor == filtros.tipo %}selected{% endif %}>
+                            {{ etiqueta }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="sucursal" class="form-label">Sucursal</label>
+                <select class="form-select" id="sucursal" name="sucursal">
+                    <option value="">Todas las sucursales</option>
+                    {% for sucursal in sucursales %}
+                        <option value="{{ sucursal.id }}" {% if sucursal.id == filtros.sucursal|add:0 %}selected{% endif %}>
+                            {{ sucursal.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="fecha_desde" class="form-label">Desde</label>
+                <input type="date" class="form-control" id="fecha_desde" name="fecha_desde" value="{{ filtros.fecha_desde }}">
+            </div>
+            <div class="col-md-2">
+                <label for="fecha_hasta" class="form-label">Hasta</label>
+                <input type="date" class="form-control" id="fecha_hasta" name="fecha_hasta" value="{{ filtros.fecha_hasta }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de movimientos -->
+<div class="card">
+    <div class="card-body">
+        {% if movimientos %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Producto</th>
+                            <th>Tipo</th>
+                            <th>Sucursal</th>
+                            <th>Cantidad</th>
+                            <th>Stock Anterior</th>
+                            <th>Stock Nuevo</th>
+                            <th>Usuario</th>
+                            <th>Documento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movimiento in movimientos %}
+                        <tr>
+                            <td>
+                                <div>{{ movimiento.fecha|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ movimiento.fecha|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'detalle_producto' movimiento.producto.id %}" class="text-decoration-none">
+                                    <strong>{{ movimiento.producto.nombre }}</strong>
+                                </a>
+                                <br><small class="text-muted">{{ movimiento.producto.codigo }}</small>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                {% if movimiento.tipo == 'entrada' %}bg-success
+                                {% elif movimiento.tipo == 'salida' %}bg-danger
+                                {% elif movimiento.tipo == 'transferencia' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                    {{ movimiento.get_tipo_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {{ movimiento.sucursal.nombre }}
+                                {% if movimiento.sucursal_destino %}
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-arrow-right"></i> {{ movimiento.sucursal_destino.nombre }}
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold {% if movimiento.tipo == 'entrada' %}text-success{% elif movimiento.tipo == 'salida' %}text-danger{% endif %}">
+                                    {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' %}-{% endif %}{{ movimiento.cantidad }}
+                                </span>
+                            </td>
+                            <td>{{ movimiento.cantidad_anterior }}</td>
+                            <td>{{ movimiento.cantidad_nueva }}</td>
+                            <td>{{ movimiento.usuario.get_full_name|default:movimiento.usuario.username }}</td>
+                            <td>
+                                {% if movimiento.numero_documento %}
+                                    <code>{{ movimiento.numero_documento }}</code>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if movimientos.has_other_pages %}
+                <nav aria-label="Paginación">
+                    <ul class="pagination justify-content-center">
+                        {% if movimientos.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ movimientos.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Página {{ movimientos.number }} de {{ movimientos.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if movimientos.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ movimientos.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ movimientos.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-arrow-left-right text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">No se encontraron movimientos</h4>
+                <p class="text-muted">
+                    {% if filtros.tipo or filtros.sucursal %}
+                        No hay movimientos que coincidan con los filtros aplicados.
+                    {% else %}
+                        Aún no se han registrado movimientos en el sistema.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estadísticas -->
+{% if movimientos %}
+<div class="row mt-4">
+    <div class="col-12">
+        <small class="text-muted">
+            <i class="bi bi-info-circle"></i>
+            Mostrando {{ movimientos|length }} de {{ movimientos.paginator.count }} movimiento{{ movimientos.paginator.count|pluralize }} total{{ movimientos.paginator.count|pluralize:"es" }}
+        </small>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

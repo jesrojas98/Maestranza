@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Categoría - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Crear Nueva Categoría{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'lista_categorias' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver a Categorías
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-tags"></i> Información de la Categoría
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.nombre.id_for_label }}" class="form-label">
+                            <i class="bi bi-tag"></i> Nombre de la Categoría *
+                        </label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.nombre.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Nombre descriptivo para la categoría</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.descripcion.id_for_label }}" class="form-label">
+                            <i class="bi bi-card-text"></i> Descripción
+                        </label>
+                        {{ form.descripcion }}
+                        {% if form.descripcion.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.descripcion.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Descripción detallada de qué productos incluye esta categoría</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.color.id_for_label }}" class="form-label">
+                            <i class="bi bi-palette"></i> Color Identificativo
+                        </label>
+                        <div class="row">
+                            <div class="col-md-3">
+                                {{ form.color }}
+                            </div>
+                            <div class="col-md-9">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge me-2" id="color-preview" style="background-color: #007bff; padding: 0.5rem 1rem;">
+                                        Vista previa
+                                    </span>
+                                    <small class="text-muted">Este color se usará para identificar la categoría</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% if form.color.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.color.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Crear Categoría
+                        </button>
+                        <a href="{% url 'lista_categorias' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> ¿Para qué sirven las categorías?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-lightbulb"></i> Beneficios:</h6>
+                    <ul class="mb-0 small">
+                        <li>Organizar productos de forma lógica</li>
+                        <li>Filtrar y buscar productos fácilmente</li>
+                        <li>Generar reportes por categoría</li>
+                        <li>Identificación visual rápida</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-bookmark"></i> Ejemplos de categorías:</h6>
+                    <div class="small">
+                        <div class="mb-1">
+                            <span class="badge" style="background-color: #007bff;">Herramientas Manuales</span>
+                        </div>
+                        <div class="mb-1">
+                            <span class="badge" style="background-color: #28a745;">Herramientas Eléctricas</span>
+                        </div>
+                        <div class="mb-1">
+                            <span class="badge" style="background-color: #ffc107; color: #000;">Materiales</span>
+                        </div>
+                        <div class="mb-1">
+                            <span class="badge" style="background-color: #17a2b8;">Plomería</span>
+                        </div>
+                        <div class="mb-1">
+                            <span class="badge" style="background-color: #dc3545;">Electricidad</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-palette"></i> Colores Sugeridos
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-4">
+                        <button type="button" class="btn btn-sm w-100 color-btn" 
+                                style="background-color: #007bff; color: white;" 
+                                data-color="#007bff">Azul</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-sm w-100 color-btn" 
+                                style="background-color: #28a745; color: white;" 
+                                data-color="#28a745">Verde</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-sm w-100 color-btn" 
+                                style="background-color: #ffc107; color: black;" 
+                                data-color="#ffc107">Amarillo</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-sm w-100 color-btn" 
+                                style="background-color: #dc3545; color: white;" 
+                                data-color="#dc3545">Rojo</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-sm w-100 color-btn" 
+                                style="background-color: #6f42c1; color: white;" 
+                                data-color="#6f42c1">Púrpura</button>
+                    </div>
+                    <div class="col-4">
+                        <button type="button" class="btn btn-sm w-100 color-btn" 
+                                style="background-color: #fd7e14; color: white;" 
+                                data-color="#fd7e14">Naranja</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Actualizar vista previa del color
+function updateColorPreview() {
+    const colorInput = document.getElementById('{{ form.color.id_for_label }}');
+    const preview = document.getElementById('color-preview');
+    if (!colorInput || !preview) return;
+    
+    const color = colorInput.value;
+    preview.style.backgroundColor = color;
+    
+    // Cambiar color del texto según el brillo del fondo
+    const rgb = hexToRgb(color);
+    if (rgb) {
+        const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+        preview.style.color = brightness > 128 ? '#000' : '#fff';
+    }
+}
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const colorInput = document.getElementById('{{ form.color.id_for_label }}');
+    if (colorInput) {
+        colorInput.addEventListener('input', updateColorPreview);
+        updateColorPreview(); // Actualizar vista previa inicial
+    }
+    
+    // Botones de colores sugeridos
+    document.querySelectorAll('.color-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const color = this.getAttribute('data-color');
+            const colorInput = document.getElementById('{{ form.color.id_for_label }}');
+            if (colorInput) {
+                colorInput.value = color;
+                updateColorPreview();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

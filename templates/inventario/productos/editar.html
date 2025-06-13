@@ -1,0 +1,722 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar {{ producto.nombre }} - Sistema de Inventario{% endblock %}
+
+{% block page_title %}Editar Producto{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'detalle_producto' producto.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver al Producto
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.imagen-preview {
+    max-width: 200px;
+    max-height: 200px;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    background-color: #f8f9fa;
+}
+
+.imagen-preview img {
+    max-width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.imagen-upload-area {
+    border: 2px dashed #007bff;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.imagen-upload-area:hover {
+    background-color: #e9ecef;
+    border-color: #0056b3;
+}
+
+.imagen-upload-area.dragover {
+    background-color: #e7f3ff;
+    border-color: #0056b3;
+}
+
+.imagen-actual {
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f8fff9;
+}
+
+/* ✅ CONTENEDOR DE IMAGEN CON ALTURA FIJA */
+.imagen-container {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fff;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* ✅ IMAGEN QUE SE AJUSTA PERFECTAMENTE */
+.imagen-container img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    object-position: center;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+    .imagen-actual img,
+    .imagen-preview img {
+        height: 150px;
+    }
+    
+    .preview-container img {
+        height: 120px;
+    }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ✅ FORMULARIO ENVUELVE TODO EL CONTENIDO -->
+<form method="post" enctype="multipart/form-data" id="formEditarProducto">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil"></i> Editar Información del Producto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Información actual -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <strong>Producto:</strong> {{ producto.nombre }}<br>
+                                <strong>Código:</strong> <code>{{ producto.codigo }}</code>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <strong>Creado:</strong> {{ producto.created_at|date:"d/m/Y" }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="codigo" class="form-label">
+                                    <i class="bi bi-upc-scan"></i> Código *
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="codigo" 
+                                       name="codigo" 
+                                       value="{{ producto.codigo }}"
+                                       required>
+                                <div class="form-text">
+                                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                                    Cambiar el código puede afectar reportes e historial
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="categoria" class="form-label">
+                                    <i class="bi bi-tags"></i> Categoría
+                                </label>
+                                <select class="form-select" id="categoria" name="categoria">
+                                    <option value="">Seleccionar categoría</option>
+                                    {% for categoria in categorias %}
+                                        <option value="{{ categoria.id }}" 
+                                                {% if producto.categoria.id == categoria.id %}selected{% endif %}>
+                                            {{ categoria.nombre }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="precio" class="form-label">
+                                    <i class="bi bi-currency-dollar"></i> Precio
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="precio" 
+                                           name="precio" 
+                                           value="{{ producto.precio|default:'' }}"
+                                           step="0.01"
+                                           min="0"
+                                           placeholder="0.00">
+                                </div>
+                                <div class="form-text">
+                                    {% if producto.precio %}
+                                        <i class="bi bi-info-circle text-success"></i>
+                                        Precio actual: <strong>${{ producto.precio }}</strong>
+                                        {% if producto.precio_actualizado %}
+                                            (actualizado {{ producto.precio_actualizado|date:"d/m/Y H:i" }})
+                                        {% endif %}
+                                    {% else %}
+                                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                                        Sin precio asignado
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>    
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">
+                            <i class="bi bi-box"></i> Nombre del Producto *
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="nombre" 
+                               name="nombre" 
+                               value="{{ producto.nombre }}"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">
+                            <i class="bi bi-card-text"></i> Descripción
+                        </label>
+                        <textarea class="form-control" 
+                                  id="descripcion" 
+                                  name="descripcion" 
+                                  rows="3">{{ producto.descripcion }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="unidad_medida" class="form-label">
+                                    <i class="bi bi-rulers"></i> Unidad de Medida
+                                </label>
+                                <select class="form-select" id="unidad_medida" name="unidad_medida">
+                                    <option value="unidad" {% if producto.unidad_medida == 'unidad' %}selected{% endif %}>Unidad</option>
+                                    <option value="kg" {% if producto.unidad_medida == 'kg' %}selected{% endif %}>Kilogramo</option>
+                                    <option value="metro" {% if producto.unidad_medida == 'metro' %}selected{% endif %}>Metro</option>
+                                    <option value="litro" {% if producto.unidad_medida == 'litro' %}selected{% endif %}>Litro</option>
+                                    <option value="caja" {% if producto.unidad_medida == 'caja' %}selected{% endif %}>Caja</option>
+                                    <option value="paquete" {% if producto.unidad_medida == 'paquete' %}selected{% endif %}>Paquete</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_minimo" class="form-label">
+                                    <i class="bi bi-exclamation-triangle"></i> Stock Mínimo
+                                </label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="stock_minimo" 
+                                       name="stock_minimo" 
+                                       value="{{ producto.stock_minimo }}"
+                                       min="0">
+                                <div class="form-text">Actual: {{ producto.stock_minimo }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Etiquetas -->
+                    {% if etiquetas %}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="bi bi-tags"></i> Etiquetas
+                        </label>
+                        <div class="row">
+                            {% for etiqueta in etiquetas %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="etiqueta_{{ etiqueta.id }}" 
+                                               name="etiquetas" 
+                                               value="{{ etiqueta.id }}"
+                                               {% if etiqueta in producto.etiquetas.all %}checked{% endif %}>
+                                        <label class="form-check-label" for="etiqueta_{{ etiqueta.id }}">
+                                            <span class="badge me-1" style="background-color: {{ etiqueta.color }}">
+                                                {{ etiqueta.nombre }}
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Configuraciones especiales -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="bi bi-gear"></i> Configuraciones Especiales
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="maneja_lotes" 
+                                               name="maneja_lotes"
+                                               {% if producto.maneja_lotes %}checked{% endif %}>
+                                        <label class="form-check-label" for="maneja_lotes">
+                                            <i class="bi bi-box-seam"></i> Maneja Lotes
+                                        </label>
+                                        <div class="form-text">El producto se gestiona por lotes</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="maneja_vencimiento" 
+                                               name="maneja_vencimiento"
+                                               {% if producto.maneja_vencimiento %}checked{% endif %}>
+                                        <label class="form-check-label" for="maneja_vencimiento">
+                                            <i class="bi bi-calendar-x"></i> Controla Vencimiento
+                                        </label>
+                                        <div class="form-text">El producto tiene fecha de vencimiento</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="activo" 
+                                               name="activo"
+                                               {% if producto.activo %}checked{% endif %}>
+                                        <label class="form-check-label" for="activo">
+                                            <i class="bi bi-check-circle"></i> Producto Activo
+                                        </label>
+                                        <div class="form-text">Los productos inactivos no aparecen en listas</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Actualizar Producto
+                        </button>
+                        <a href="{% url 'detalle_producto' producto.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Imagen - AHORA DENTRO DEL FORMULARIO -->
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-image"></i> Imagen del Producto
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- ✅ INPUT DE IMAGEN DENTRO DEL FORMULARIO -->
+                    <input type="file" 
+                           class="d-none" 
+                           id="imagen" 
+                           name="imagen" 
+                           accept="image/*">
+                    
+                    <!-- Checkbox para eliminar imagen dentro del formulario -->
+                    <input type="checkbox" 
+                           id="eliminar_imagen" 
+                           name="eliminar_imagen" 
+                           class="d-none">
+
+                    <!-- Imagen Actual -->
+                    {% if producto.imagen %}
+                        <div class="imagen-actual mb-3" id="imagenActual">
+                            <!-- ✅ CONTENEDOR CON ALTURA FIJA -->
+                            <div class="imagen-container">
+                                <img src="{{ producto.imagen.url }}" 
+                                    alt="{{ producto.nombre }}">
+                            </div>
+                            
+                            <div class="mt-2 d-flex gap-1">
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger flex-fill" 
+                                        onclick="toggleEliminarImagen()">
+                                    <i class="bi bi-trash"></i> Eliminar imagen
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary" 
+                                        onclick="cambiarImagen()">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Checkbox oculto para eliminar imagen -->
+                            <div class="form-check mt-2 d-none" id="eliminarImagenCheck">
+                                <label class="form-check-label text-danger" for="eliminar_imagen">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Confirmar eliminación de imagen actual
+                                </label>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Área de Upload -->
+                    <div class="imagen-upload-area mb-3 {% if producto.imagen %}d-none{% endif %}" id="uploadArea">
+                        <div id="uploadText">
+                            <i class="bi bi-cloud-upload display-4 text-primary mb-2"></i>
+                            <p class="mb-2">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                            <small class="text-muted">JPG, PNG, GIF, WebP (máx. 5MB)</small>
+                        </div>
+                    </div>
+
+                    <!-- Preview de Nueva Imagen -->
+                    <div class="imagen-preview d-none" id="imagePreview">
+                        <img id="previewImg" src="" alt="Preview">
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
+                                <i class="bi bi-trash"></i> Quitar imagen nueva
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Información -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <small>
+                            <strong>Recomendaciones:</strong><br>
+                            • Usar imágenes cuadradas (500x500px)<br>
+                            • Fondo blanco o transparente<br>
+                            • Formato JPG para mejor compresión
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <!-- Estado actual -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Estado Actual
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row small">
+                        <dt class="col-sm-5">Stock Total:</dt>
+                        <dd class="col-sm-7">{{ producto.get_stock_total }} {{ producto.unidad_medida }}</dd>
+                        
+                        <dt class="col-sm-5">Sucursales:</dt>
+                        <dd class="col-sm-7">{{ producto.inventario_set.count }}</dd>
+                        
+                        {% if producto.maneja_lotes %}
+                        <dt class="col-sm-5">Lotes:</dt>
+                        <dd class="col-sm-7">{{ producto.lote_set.count }}</dd>
+                        {% endif %}
+                        
+                        <dt class="col-sm-5">Movimientos:</dt>
+                        <dd class="col-sm-7">{{ producto.movimientoinventario_set.count }}</dd>
+                    </dl>
+                </div>
+            </div>
+            
+            <!-- Advertencias -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle text-warning"></i> Importante
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h6>Al editar este producto:</h6>
+                        <ul class="mb-0 small">
+                            <li>Los cambios afectarán todas las sucursales</li>
+                            <li>El historial de movimientos se conserva</li>
+                            <li>Cambiar configuraciones de lotes puede requerir ajustes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Acciones relacionadas -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-lightning"></i> Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'movimiento_inventario' producto.id %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-arrow-left-right"></i> Nuevo Movimiento
+                        </a>
+                        {% if producto.maneja_lotes %}
+                        <a href="{% url 'lista_lotes' producto.id %}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-box-seam"></i> Gestionar Lotes
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'crear_categoria' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-tags"></i> Nueva Categoría
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<!-- ✅ FIN DEL FORMULARIO -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Funcionalidad existente
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const originalValues = {};
+    
+    // Guardar valores originales
+    Array.from(form.elements).forEach(element => {
+        if (element.name) {
+            originalValues[element.name] = element.value;
+        }
+    });
+    
+    // Advertir sobre cambios críticos
+    const codigoField = document.getElementById('codigo');
+    if (codigoField) {
+        codigoField.addEventListener('change', function() {
+            if (this.value !== originalValues[this.name]) {
+                this.classList.add('border-warning');
+            }
+        });
+    }
+    
+    // Lógica para manejo de lotes y vencimiento
+    const manejaLotes = document.getElementById('maneja_lotes');
+    const manejaVencimiento = document.getElementById('maneja_vencimiento');
+    
+    if (manejaLotes && manejaVencimiento) {
+        manejaVencimiento.addEventListener('change', function() {
+            if (this.checked && !manejaLotes.checked) {
+                manejaLotes.checked = true;
+                alert('Para controlar vencimiento, el producto debe manejar lotes. Se ha activado automáticamente.');
+            }
+        });
+    }
+
+     const uploadArea = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('imagen');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const uploadText = document.getElementById('uploadText');
+    const imageFileInfo = document.getElementById('imageFileInfo');
+
+    if (uploadArea && imageInput) {
+        // Click en área de upload
+        uploadArea.addEventListener('click', function() {
+            imageInput.click();
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageUpload(files[0]);
+            }
+        });
+
+        // Cambio en input file
+        imageInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleImageUpload(e.target.files[0]);
+            }
+        });
+
+        function handleImageUpload(file) {
+            // Validar tipo de archivo
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                alert('Formato de archivo no válido. Use JPG, PNG, GIF o WebP.');
+                return;
+            }
+
+            // Validar tamaño (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('La imagen es demasiado grande. Máximo 5MB.');
+                return;
+            }
+
+            // Mostrar información del archivo
+            const fileSizeKB = Math.round(file.size / 1024);
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            const sizeText = fileSizeKB > 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`;
+            
+            if (imageFileInfo) {
+                imageFileInfo.textContent = `📄 ${file.name} (${sizeText})`;
+            }
+
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                uploadText.style.display = 'none';
+                imagePreview.classList.remove('d-none');
+                uploadArea.style.border = '2px solid #28a745';
+                uploadArea.style.backgroundColor = '#f8fff9';
+                
+                // Obtener dimensiones de la imagen
+                const img = new Image();
+                img.onload = function() {
+                    const dimensionsText = `📐 ${this.width}x${this.height}px`;
+                    if (imageFileInfo) {
+                        imageFileInfo.innerHTML = `📄 ${file.name} (${sizeText})<br>${dimensionsText}`;
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
+
+// Función para alternar entre modos de ajuste de imagen
+function toggleImageFit() {
+    const img = document.getElementById('imagenProducto');
+    const fitMode = document.getElementById('fitMode');
+    
+    if (img) {
+        const currentFit = img.dataset.fit || 'contain';
+        let newFit, newText;
+        
+        switch(currentFit) {
+            case 'contain':
+                newFit = 'cover';
+                newText = '🔍 Ajuste: Recortada';
+                break;
+            case 'cover':
+                newFit = 'fill';
+                newText = '📏 Ajuste: Estirada';
+                break;
+            case 'fill':
+                newFit = 'contain';
+                newText = '📐 Ajuste: Completa';
+                break;
+            default:
+                newFit = 'contain';
+                newText = '📐 Ajuste: Completa';
+        }
+        
+        img.style.objectFit = newFit;
+        img.dataset.fit = newFit;
+        
+        if (fitMode) {
+            fitMode.textContent = newText;
+        }
+        
+        // Guardar preferencia en localStorage
+        localStorage.setItem('imageFitMode', newFit);
+    }
+}
+
+// Restaurar modo de ajuste guardado
+document.addEventListener('DOMContentLoaded', function() {
+    const img = document.getElementById('imagenProducto');
+    const fitMode = document.getElementById('fitMode');
+    const savedFit = localStorage.getItem('imageFitMode') || 'contain';
+    
+    if (img) {
+        img.style.objectFit = savedFit;
+        img.dataset.fit = savedFit;
+        
+        if (fitMode) {
+            const modeTexts = {
+                'contain': '📐 Ajuste: Completa',
+                'cover': '🔍 Ajuste: Recortada', 
+                'fill': '📏 Ajuste: Estirada'
+            };
+            fitMode.textContent = modeTexts[savedFit] || '📐 Ajuste: Completa';
+        }
+    }
+});
+
+function toggleEliminarImagen() {
+    const eliminarCheck = document.getElementById('eliminarImagenCheck');
+    const checkbox = document.getElementById('eliminar_imagen');
+    
+    if (eliminarCheck.classList.contains('d-none')) {
+        eliminarCheck.classList.remove('d-none');
+        checkbox.checked = true;
+    } else {
+        eliminarCheck.classList.add('d-none');
+        checkbox.checked = false;
+    }
+}
+
+function cambiarImagen() {
+    const imagenActual = document.getElementById('imagenActual');
+    const uploadArea = document.getElementById('uploadArea');
+    
+    if (imagenActual) imagenActual.classList.add('d-none');
+    if (uploadArea) uploadArea.classList.remove('d-none');
+}
+
+function removeImage() {
+    const imageInput = document.getElementById('imagen');
+    const imagePreview = document.getElementById('imagePreview');
+    const uploadText = document.getElementById('uploadText');
+    const uploadArea = document.getElementById('uploadArea');
+
+    if (imageInput) imageInput.value = '';
+    if (imagePreview) imagePreview.classList.add('d-none');
+    if (uploadText) uploadText.style.display = 'block';
+    if (uploadArea) {
+        uploadArea.style.border = '2px dashed #007bff';
+        uploadArea.style.backgroundColor = '#f8f9fa';
+    }
+}
+</script>
+{% endblock %}

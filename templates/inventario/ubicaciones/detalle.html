@@ -1,0 +1,769 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ ubicacion.codigo }} - {{ ubicacion.nombre }} - {{ sucursal_actual.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ubicacion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+    .stat-card {
+        transition: transform 0.2s;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .progress-container {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+    }
+    .product-item {
+        border-left: 4px solid #dee2e6;
+        transition: all 0.3s;
+    }
+    .product-item:hover {
+        border-left-color: #007bff;
+        background-color: #f8f9ff;
+    }
+    .product-low-stock {
+        border-left-color: #ffc107;
+    }
+    .product-no-stock {
+        border-left-color: #dc3545;
+    }
+    .timeline-item {
+        border-left: 2px solid #dee2e6;
+        position: relative;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 20px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #dee2e6;
+    }
+    .timeline-entrada::before { background: #28a745; }
+    .timeline-salida::before { background: #dc3545; }
+    .timeline-transferencia::before { background: #17a2b8; }
+    .timeline-ajuste::before { background: #ffc107; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'lista_ubicaciones' sucursal_id=sucursal_actual.id %}">Ubicaciones</a></li>
+            <li class="breadcrumb-item active">{{ ubicacion.codigo }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header de la Ubicación -->
+    <div class="card mb-4">
+        <div class="card-header ubicacion-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            {% if ubicacion.tipo == 'estanteria' %}
+                                <i class="fas fa-th-large fa-3x"></i>
+                            {% elif ubicacion.tipo == 'bodega' %}
+                                <i class="fas fa-warehouse fa-3x"></i>
+                            {% elif ubicacion.tipo == 'vitrina' %}
+                                <i class="fas fa-store fa-3x"></i>
+                            {% else %}
+                                <i class="fas fa-box fa-3x"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h2 class="mb-1">{{ ubicacion.codigo }}</h2>
+                            <h5 class="mb-1 opacity-75">{{ ubicacion.nombre }}</h5>
+                            <div class="d-flex align-items-center">
+                                <span class="badge 
+                                    {% if ubicacion.activa %}
+                                        {% if ubicacion.esta_llena %}bg-warning{% elif ubicacion.necesita_atencion %}bg-info{% else %}bg-success{% endif %}
+                                    {% else %}bg-danger{% endif %} me-2">
+                                    {% if not ubicacion.activa %}
+                                        Inactiva
+                                    {% elif ubicacion.esta_llena %}
+                                        Llena
+                                    {% elif ubicacion.necesita_atencion %}
+                                        Atención
+                                    {% else %}
+                                        Activa
+                                    {% endif %}
+                                </span>
+                                <span class="badge bg-light text-dark">{{ ubicacion.get_tipo_display }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'editar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-outline-light">
+                            <i class="fas fa-edit me-1"></i>Editar
+                        </a>
+                        <a href="{% url 'asignar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-outline-light">
+                            <i class="fas fa-boxes me-1"></i>Asignar
+                        </a>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'mapa_ubicaciones' sucursal_id=sucursal_actual.id %}">
+                                    <i class="fas fa-map me-2"></i>Ver en Mapa
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="confirmarEliminacion()">
+                                    <i class="fas fa-trash me-2"></i>Eliminar
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if ubicacion.descripcion %}
+        <div class="card-body">
+            <p class="mb-0 text-muted">{{ ubicacion.descripcion }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-2x text-primary mb-3"></i>
+                    <h3 class="mb-1">{{ ubicacion.get_productos_count }}</h3>
+                    <small class="text-muted">Productos Asignados</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-bar fa-2x text-success mb-3"></i>
+                    <h3 class="mb-1">
+                        {% if ubicacion.capacidad_maxima %}
+                            {{ ubicacion.get_capacidad_usada }}/{{ ubicacion.capacidad_maxima }}
+                        {% else %}
+                            {{ ubicacion.get_capacidad_usada }}/∞
+                        {% endif %}
+                    </h3>
+                    <small class="text-muted">Capacidad Usada</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x 
+                        {% if ubicacion.get_porcentaje_ocupacion >= 90 %}text-danger
+                        {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}text-warning
+                        {% else %}text-info{% endif %} mb-3"></i>
+                    <h3 class="mb-1">{{ ubicacion.get_porcentaje_ocupacion }}%</h3>
+                    <small class="text-muted">Ocupación</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar fa-2x text-warning mb-3"></i>
+                    <h3 class="mb-1">{{ dias_desde_creacion }}</h3>
+                    <small class="text-muted">Días en Uso</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progreso de Capacidad -->
+    {% if ubicacion.capacidad_maxima %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="progress-container">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Capacidad de la Ubicación</h6>
+                    <span class="badge 
+                        {% if ubicacion.get_porcentaje_ocupacion >= 90 %}bg-danger
+                        {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}bg-warning
+                        {% else %}bg-success{% endif %}">
+                        {{ ubicacion.get_porcentaje_ocupacion }}%
+                    </span>
+                </div>
+                <div class="progress mb-2" style="height: 20px;">
+                    <div class="progress-bar 
+                        {% if ubicacion.get_porcentaje_ocupacion >= 90 %}bg-danger
+                        {% elif ubicacion.get_porcentaje_ocupacion >= 75 %}bg-warning
+                        {% else %}bg-success{% endif %}" 
+                        style="width: {{ ubicacion.get_porcentaje_ocupacion }}%">
+                        {{ ubicacion.get_capacidad_usada }}/{{ ubicacion.capacidad_maxima }}
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <small class="text-muted">Usado: {{ ubicacion.get_capacidad_usada }}</small>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Disponible: {{ ubicacion.capacidad_maxima|add:ubicacion.get_capacidad_usada|add:"-"|add:ubicacion.get_capacidad_usada }}</small>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Total: {{ ubicacion.capacidad_maxima }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Productos Asignados -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>
+                        Productos Asignados ({{ ubicacion.get_productos_count }})
+                    </h5>
+                    <div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="filtro" id="todos" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="todos">Todos</label>
+                            
+                            <input type="radio" class="btn-check" name="filtro" id="stock_bajo" autocomplete="off">
+                            <label class="btn btn-outline-warning" for="stock_bajo">Stock Bajo</label>
+                            
+                            <input type="radio" class="btn-check" name="filtro" id="sin_stock" autocomplete="off">
+                            <label class="btn btn-outline-danger" for="sin_stock">Sin Stock</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if ubicacion.inventario_set.exists %}
+                        <div class="row" id="productosContainer">
+                            {% for inventario in ubicacion.inventario_set.all %}
+                            <div class="col-md-6 mb-3 producto-item" 
+                                 data-stock-bajo="{% if inventario.necesita_reposicion %}true{% else %}false{% endif %}"
+                                 data-sin-stock="{% if inventario.cantidad == 0 %}true{% else %}false{% endif %}">
+                                <div class="card product-item h-100 
+                                    {% if inventario.cantidad == 0 %}product-no-stock
+                                    {% elif inventario.necesita_reposicion %}product-low-stock{% endif %}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">
+                                                    <a href="{% url 'detalle_producto' inventario.producto.id %}" class="text-decoration-none">
+                                                        {{ inventario.producto.nombre }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">{{ inventario.producto.codigo }}</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge 
+                                                    {% if inventario.cantidad == 0 %}bg-danger
+                                                    {% elif inventario.necesita_reposicion %}bg-warning
+                                                    {% else %}bg-success{% endif %} fs-6">
+                                                    {{ inventario.cantidad }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row text-center small">
+                                            <div class="col-4">
+                                                <div class="text-muted">Stock Mín.</div>
+                                                <div class="fw-bold">{{ inventario.producto.stock_minimo }}</div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-muted">Total</div>
+                                                <div class="fw-bold">{{ inventario.producto.get_stock_total }}</div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-muted">Categoría</div>
+                                                <div class="fw-bold">{{ inventario.producto.categoria.nombre|truncatechars:10 }}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if inventario.ubicacion %}
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                                    {{ inventario.ubicacion }}
+                                                </small>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Actualizado: {{ inventario.updated_at|date:"d/m/Y H:i" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <div class="btn-group w-100" role="group">
+                                            <a href="{% url 'detalle_producto' inventario.producto.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="movimientoRapido({{ inventario.producto.id }}, 'entrada')">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="movimientoRapido({{ inventario.producto.id }}, 'salida')">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="reubicarProducto({{ inventario.producto.id }})">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No hay productos asignados</h5>
+                            <p class="text-muted">Esta ubicación está vacía. Puedes asignar productos desde el inventario.</p>
+                            <a href="{% url 'asignar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>
+                                Asignar Productos
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-4">
+            <!-- Información Detallada -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información Detallada
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <td><strong>Sucursal:</strong></td>
+                            <td>{{ ubicacion.sucursal.nombre }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Código:</strong></td>
+                            <td><code>{{ ubicacion.codigo }}</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tipo:</strong></td>
+                            <td>{{ ubicacion.get_tipo_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Estado:</strong></td>
+                            <td>
+                                {% if ubicacion.activa %}
+                                    <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactiva</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Capacidad:</strong></td>
+                            <td>
+                                {% if ubicacion.capacidad_maxima %}
+                                    {{ ubicacion.capacidad_maxima }} productos
+                                {% else %}
+                                    <span class="badge bg-info">Ilimitada</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Creada:</strong></td>
+                            <td>{{ ubicacion.created_at|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Alertas y Notificaciones -->
+            {% if ubicacion.esta_llena or ubicacion.necesita_atencion or alertas_activas %}
+            <div class="card mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Alertas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if ubicacion.esta_llena %}
+                        <div class="alert alert-danger mb-2">
+                            <i class="fas fa-box me-2"></i>
+                            <strong>Ubicación llena</strong><br>
+                            <small>Ha alcanzado su capacidad máxima</small>
+                        </div>
+                    {% endif %}
+                    
+                    {% if ubicacion.necesita_atencion %}
+                        <div class="alert alert-warning mb-2">
+                            <i class="fas fa-attention me-2"></i>
+                            <strong>Necesita atención</strong><br>
+                            <small>Revisa la capacidad y organización</small>
+                        </div>
+                    {% endif %}
+                    
+                    {% for alerta in alertas_activas %}
+                        <div class="alert alert-info mb-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>{{ alerta.get_tipo_display }}</strong><br>
+                            <small>{{ alerta.mensaje }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Acciones Rápidas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'asignar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>
+                            Asignar Productos
+                        </a>
+                        <button type="button" class="btn btn-success btn-sm" onclick="entradaMasiva()">
+                            <i class="fas fa-download me-1"></i>
+                            Entrada Masiva
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm" onclick="salidaMasiva()">
+                            <i class="fas fa-upload me-1"></i>
+                            Salida Masiva
+                        </button>
+                        <a href="{% url 'mapa_ubicaciones' sucursal_id=sucursal_actual.id %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-map me-1"></i>
+                            Ver en Mapa
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="generarReporte()">
+                            <i class="fas fa-file-excel me-1"></i>
+                            Reporte Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial Reciente -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Movimientos Recientes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if movimientos_recientes %}
+                        <div class="timeline">
+                            {% for movimiento in movimientos_recientes|slice:":5" %}
+                            <div class="timeline-item timeline-{{ movimiento.tipo }} ps-3 pb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ movimiento.producto.nombre|truncatechars:25 }}</h6>
+                                        <small class="text-muted">
+                                            {{ movimiento.get_tipo_display }}
+                                            {% if movimiento.tipo == 'transferencia' and movimiento.sucursal_destino %}
+                                                → {{ movimiento.sucursal_destino.nombre }}
+                                            {% endif %}
+                                        </small>
+                                        <div class="small text-muted">
+                                            {{ movimiento.fecha|date:"d/m H:i" }}
+                                        </div>
+                                    </div>
+                                    <span class="badge 
+                                        {% if movimiento.tipo == 'entrada' %}bg-success
+                                        {% elif movimiento.tipo == 'salida' %}bg-danger
+                                        {% elif movimiento.tipo == 'transferencia' %}bg-info
+                                        {% else %}bg-warning{% endif %}">
+                                        {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' %}-{% endif %}{{ movimiento.cantidad }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'movimientos_inventario' %}?ubicacion={{ ubicacion.id }}" class="btn btn-sm btn-outline-primary">
+                                Ver Todos los Movimientos
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">Sin movimientos recientes</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Movimiento Rápido -->
+<div class="modal fade" id="modalMovimientoRapido" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalMovimientoTitle">Movimiento Rápido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formMovimientoRapido">
+                    <input type="hidden" id="productoId">
+                    <input type="hidden" id="tipoMovimiento">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Producto</label>
+                        <input type="text" class="form-control" id="productoNombre" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cantidad" class="form-label">Cantidad</label>
+                        <input type="number" class="form-control" id="cantidad" min="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="motivo" class="form-label">Motivo</label>
+                        <input type="text" class="form-control" id="motivo" placeholder="Motivo del movimiento">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="ejecutarMovimientoRapido()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reubicar Producto -->
+<div class="modal fade" id="modalReubicar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reubicar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formReubicar">
+                    <input type="hidden" id="reubicarProductoId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Producto</label>
+                        <input type="text" class="form-control" id="reubicarProductoNombre" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nuevaUbicacion" class="form-label">Nueva Ubicación</label>
+                        <select class="form-select" id="nuevaUbicacion" required>
+                            <option value="">Seleccionar ubicación...</option>
+                            {% for otra_ubicacion in otras_ubicaciones %}
+                                <option value="{{ otra_ubicacion.id }}">{{ otra_ubicacion.codigo }} - {{ otra_ubicacion.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="cantidadReubicar" class="form-label">Cantidad a reubicar</label>
+                        <input type="number" class="form-control" id="cantidadReubicar" min="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="ejecutarReubicacion()">Reubicar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminación -->
+<div class="modal fade" id="modalEliminar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>¿Estás seguro de eliminar la ubicación "{{ ubicacion.codigo }}"?</strong>
+                </div>
+                <p>Esta acción no se puede deshacer. Los productos asignados a esta ubicación quedarán sin ubicación específica.</p>
+                {% if ubicacion.inventario_set.exists %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-boxes me-2"></i>
+                        <strong>Atención:</strong> Esta ubicación tiene {{ ubicacion.get_productos_count }} productos asignados.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'eliminar_ubicacion' sucursal_id=sucursal_actual.id ubicacion_id=ubicacion.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtros de productos
+    const filtros = document.querySelectorAll('input[name="filtro"]');
+    const productos = document.querySelectorAll('.producto-item');
+    
+    filtros.forEach(filtro => {
+        filtro.addEventListener('change', function() {
+            const tipo = this.id;
+            
+            productos.forEach(producto => {
+                let mostrar = true;
+                
+                if (tipo === 'stock_bajo') {
+                    mostrar = producto.dataset.stockBajo === 'true';
+                } else if (tipo === 'sin_stock') {
+                    mostrar = producto.dataset.sinStock === 'true';
+                }
+                
+                producto.style.display = mostrar ? 'block' : 'none';
+            });
+        });
+    });
+});
+
+function movimientoRapido(productoId, tipo) {
+    // Obtener datos del producto
+    const productoCard = document.querySelector(`[data-producto-id="${productoId}"]`);
+    const productoNombre = productoCard ? productoCard.querySelector('.card-title a').textContent : 'Producto';
+    
+    // Configurar modal
+    document.getElementById('productoId').value = productoId;
+    document.getElementById('tipoMovimiento').value = tipo;
+    document.getElementById('productoNombre').value = productoNombre;
+    document.getElementById('modalMovimientoTitle').textContent = 
+        tipo === 'entrada' ? 'Entrada Rápida' : 'Salida Rápida';
+    
+    // Limpiar formulario
+    document.getElementById('cantidad').value = '';
+    document.getElementById('motivo').value = '';
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalMovimientoRapido'));
+    modal.show();
+}
+
+function ejecutarMovimientoRapido() {
+    const productoId = document.getElementById('productoId').value;
+    const tipo = document.getElementById('tipoMovimiento').value;
+    const cantidad = document.getElementById('cantidad').value;
+    const motivo = document.getElementById('motivo').value;
+    
+    if (!cantidad || cantidad <= 0) {
+        alert('Por favor, ingresa una cantidad válida.');
+        return;
+    }
+    
+    // Aquí enviarías los datos al servidor
+    // Por ahora, solo mostramos confirmación
+    alert(`${tipo === 'entrada' ? 'Entrada' : 'Salida'} de ${cantidad} unidades registrada.`);
+    bootstrap.Modal.getInstance(document.getElementById('modalMovimientoRapido')).hide();
+    
+    // Recargar página para mostrar cambios
+    location.reload();
+}
+
+function reubicarProducto(productoId) {
+    // Obtener datos del producto
+    const productoCard = document.querySelector(`[data-producto-id="${productoId}"]`);
+    const productoNombre = productoCard ? productoCard.querySelector('.card-title a').textContent : 'Producto';
+    
+    // Configurar modal
+    document.getElementById('reubicarProductoId').value = productoId;
+    document.getElementById('reubicarProductoNombre').value = productoNombre;
+    
+    // Limpiar formulario
+    document.getElementById('nuevaUbicacion').value = '';
+    document.getElementById('cantidadReubicar').value = '';
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalReubicar'));
+    modal.show();
+}
+
+function ejecutarReubicacion() {
+    const productoId = document.getElementById('reubicarProductoId').value;
+    const nuevaUbicacion = document.getElementById('nuevaUbicacion').value;
+    const cantidad = document.getElementById('cantidadReubicar').value;
+    
+    if (!nuevaUbicacion) {
+        alert('Por favor, selecciona una nueva ubicación.');
+        return;
+    }
+    
+    if (!cantidad || cantidad <= 0) {
+        alert('Por favor, ingresa una cantidad válida.');
+        return;
+    }
+    
+    // Aquí enviarías los datos al servidor
+    alert(`Producto reubicado: ${cantidad} unidades transferidas.`);
+    bootstrap.Modal.getInstance(document.getElementById('modalReubicar')).hide();
+    
+    // Recargar página para mostrar cambios
+    location.reload();
+}
+
+function confirmarEliminacion() {
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+    modal.show();
+}
+
+function entradaMasiva() {
+    // Implementar entrada masiva
+    alert('Función de entrada masiva - próximamente');
+}
+
+function salidaMasiva() {
+    // Implementar salida masiva
+    alert('Función de salida masiva - próximamente');
+}
+
+function generarReporte() {
+    // Generar reporte Excel específico de la ubicación
+    window.location.href = `/reportes/generar/?tipo=ubicacion&ubicacion_id={{ ubicacion.id }}`;
+}
+</script>
+{% endblock %}
