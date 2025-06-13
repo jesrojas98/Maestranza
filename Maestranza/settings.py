@@ -157,9 +157,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # URLs de autenticación
 AUTH_USER_MODEL = 'auth.User'
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = 'login' 
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+ADMIN_URL = 'admin/'
 
 # Configuración de upload de archivos
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
