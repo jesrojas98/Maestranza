@@ -177,16 +177,11 @@ STATICFILES_FINDERS = [
 # ✅ WHITENOISE CONFIGURACIÓN
 if os.environ.get('RAILWAY_ENVIRONMENT') or not DEBUG:
     # En Railway o producción
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+    STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
     
-    # ✅ CONFIGURACIÓN WHITENOISE PARA MANEJAR ARCHIVOS FALTANTES
-    WHITENOISE_MANIFEST_STRICT = False  # ← IMPORTANTE: No fallar si faltan archivos
-    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = [
-        'jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 
-        'xz', 'br', 'woff', 'woff2', 'ttf', 'eot', 'otf'
-    ]
-    WHITENOISE_USE_FINDERS = True  # ← Buscar archivos usando finders
-    
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = True
+    WHITENOISE_MAX_AGE = 31536000
 else:
     # En desarrollo local
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
