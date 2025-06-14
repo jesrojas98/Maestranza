@@ -289,7 +289,8 @@
                         <div id="uploadText">
                             <i class="bi bi-cloud-upload display-4 text-primary mb-2"></i>
                             <p class="mb-2">Arrastra una imagen aquí o haz clic para seleccionar</p>
-                            <small class="text-muted">JPG, PNG, GIF, WebP (máx. 5MB)</small>
+                            <!-- ✅ MODIFICADO: Formatos y tamaño actualizado para Cloudinary -->
+                            <small class="text-muted">JPG, PNG, GIF, WebP, BMP, TIFF (máx. 10MB)</small>
                         </div>
                     </div>
 
@@ -303,14 +304,15 @@
                         </div>
                     </div>
 
-                    <!-- Información -->
+                    <!-- ✅ MODIFICADO: Información actualizada para Cloudinary -->
                     <div class="alert alert-info">
                         <i class="bi bi-info-circle"></i>
                         <small>
                             <strong>Recomendaciones:</strong><br>
                             • Usar imágenes cuadradas (500x500px)<br>
                             • Fondo blanco o transparente<br>
-                            • Formato JPG para mejor compresión
+                            • Se optimizará automáticamente para web<br>
+                            • Cloudinary genera múltiples tamaños
                         </small>
                     </div>
                 </div>
@@ -473,16 +475,16 @@ document.addEventListener('DOMContentLoaded', function() {
         function handleImageUpload(file) {
             console.log('🔄 Procesando imagen:', file.name, file.size, 'bytes');
             
-            // Validar tipo de archivo
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            // ✅ MODIFICADO: Validación ampliada para Cloudinary
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff'];
             if (!validTypes.includes(file.type)) {
-                alert('Formato de archivo no válido. Use JPG, PNG, GIF o WebP.');
+                alert('Formato de archivo no válido. Use JPG, PNG, GIF, WebP, BMP o TIFF.');
                 return;
             }
 
-            // Validar tamaño (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('La imagen es demasiado grande. Máximo 5MB.');
+            // ✅ MODIFICADO: Límite aumentado para Cloudinary (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('La imagen es demasiado grande. Máximo 10MB.');
                 return;
             }
 

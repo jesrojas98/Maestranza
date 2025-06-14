@@ -13,6 +13,9 @@ import os
 from pathlib import Path
 import pymysql
 from decouple import config
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 pymysql.install_as_MySQLdb()
 
@@ -43,6 +46,8 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'cloudinary_storage',
+    'cloudinary',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -52,6 +57,21 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'inventario',
 ]
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dtfogmeqk'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '489165292886497'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'tVkFlEkQG1WQUACrMDNIrVBw30Q'),
+}
+
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'dtfogmeqk'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', '489165292886497'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', 'tVkFlEkQG1WQUACrMDNIrVBw30Q'),
+    secure=True
+)
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

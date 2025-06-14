@@ -230,9 +230,9 @@
                 <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
                     <div class="card producto-card d-flex flex-column h-100">
                         <div class="position-relative">
-                            <!-- Imagen del producto -->
+                            <!-- ✅ MODIFICADO: Imagen del producto optimizada para Cloudinary -->
                             {% if producto.imagen %}
-                                <img src="{{ producto.imagen.url }}" 
+                                <img src="{{ producto.get_imagen_card }}" 
                                     class="producto-imagen" 
                                     alt="{{ producto.nombre }}"
                                     loading="lazy">
@@ -349,8 +349,9 @@
                             {% for producto in productos %}
                             <tr>
                                 <td>
+                                    <!-- ✅ MODIFICADO: Imagen pequeña optimizada para Cloudinary -->
                                     {% if producto.imagen %}
-                                        <img src="{{ producto.imagen.url }}" 
+                                        <img src="{{ producto.get_imagen_thumbnail_50 }}" 
                                             class="producto-imagen-small" 
                                             alt="{{ producto.nombre }}">
                                     {% else %}

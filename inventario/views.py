@@ -525,23 +525,23 @@ def crear_producto(request):
                         # ✅ DEBUG: Verificar datos del formulario
 
                         
-                        # Validar imagen MUY simple - solo si hay una
+                        # ✅ MODIFICADO: Validar imagen para Cloudinary - más formatos y tamaño
                         imagen = request.FILES.get('imagen')
                         imagen_valida = True
                         
                         if imagen:
                             print(f"📷 Imagen detectada: {imagen.name} ({imagen.size} bytes)")
-                            # Validación mínima
+                            # Validación para Cloudinary (más formatos y mayor tamaño)
                             ext = os.path.splitext(imagen.name)[1].lower()
-                            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp'] and imagen.size <= 5 * 1024 * 1024:
-                                print("✅ Imagen válida")
+                            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'] and imagen.size <= 10 * 1024 * 1024:
+                                print("✅ Imagen válida para Cloudinary")
                             else:
                                 print("❌ Imagen inválida")
                                 imagen_valida = False
-                                if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
-                                    messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF o WebP.')
+                                if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff']:
+                                    messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF, WebP, BMP o TIFF.')
                                 else:
-                                    messages.error(request, 'La imagen es demasiado grande. Máximo 5MB.')
+                                    messages.error(request, 'La imagen es demasiado grande. Máximo 10MB.')
                         else:
                             print("ℹ️ No se subió imagen")
                         # Guardar SOLO si la imagen es válida (o no hay imagen)
@@ -555,21 +555,28 @@ def crear_producto(request):
                             producto = form.save()
                             print(f"✅ Producto creado: {producto.nombre} (ID: {producto.id})")
                             
-                            # ✅ DEBUG: Estado de imagen después de guardar
+                            # ✅ CORREGIDO: Debug para Cloudinary
                             print(f"📷 Estado de imagen después de form.save():")
                             print(f"   - producto.imagen: {producto.imagen}")
                             if producto.imagen:
-                                print(f"   - Ruta: {producto.imagen.name}")
-                                print(f"   - URL: {producto.imagen.url}")
                                 try:
-                                    print(f"   - Archivo existe: {os.path.exists(producto.imagen.path)}")
-                                    print(f"   - Tamaño archivo: {os.path.getsize(producto.imagen.path)} bytes")
-                                except:
-                                    print(f"   - Error verificando archivo físico")
+                                    if hasattr(producto.imagen, 'public_id'):
+                                        print(f"   - Public ID: {producto.imagen.public_id}")
+                                        print(f"   - URL: {producto.imagen.url}")
+                                        # ✅ CORREGIDO: Generar secure_url correctamente
+                                        from cloudinary import CloudinaryImage
+                                        secure_url = CloudinaryImage(str(producto.imagen.public_id)).build_url(secure=True)
+                                        print(f"   - Secure URL: {secure_url}")
+                                    else:
+                                        print(f"   - URL: {producto.imagen.url}")
+                                        print(f"   - Tipo: ImageField normal")
+                                except Exception as e:
+                                    print(f"   - Error obteniendo info de imagen: {e}")
+                                    print(f"   - URL básica: {getattr(producto.imagen, 'url', 'No disponible')}")
                             else:
                                 print(f"   - Sin imagen guardada")
                             
-                            # Forzar guardado de imagen si no se guardó
+                            # ✅ SIMPLIFICADO: Cloudinary maneja automáticamente la subida
                             if imagen and not producto.imagen:
                                 print("🔄 Imagen no se guardó, intentando guardar manualmente...")
                                 try:
@@ -637,11 +644,13 @@ def crear_producto(request):
                                     defaults={'cantidad': 0}
                                 )
                             
-                            # ✅ DEBUG FINAL: Estado final del producto
+                            # ✅ CORREGIDO: Debug final con manejo de errores
                             producto.refresh_from_db()
-
                             if producto.imagen:
-                                print(f"   - URL imagen: {producto.imagen.url}")
+                                try:
+                                    print(f"   - URL imagen: {producto.imagen.url}")
+                                except Exception as e:
+                                    print(f"   - Error obteniendo URL final: {e}")
                             
                             precio_msg = f' con precio ${precio}' if precio else ''
                             imagen_msg = ' con imagen' if producto.imagen else ''
@@ -669,7 +678,6 @@ def crear_producto(request):
         'form_data': request.POST if request.method == 'POST' else {}  # Mantener para compatibilidad
     }
     return render(request, 'inventario/productos/crear.html', context)
-
 
 @puede_gestionar_inventario
 def movimiento_inventario(request, producto_id):
@@ -923,7 +931,7 @@ def editar_producto(request, producto_id):
                 categoria = get_object_or_404(Categoria, id=categoria_id) if categoria_id else None
                 print(f"📂 Categoría: {categoria}")
                 
-                # === MANEJO DE IMAGEN CON DEBUG DETALLADO ===
+                # === ✅ MODIFICADO: MANEJO DE IMAGEN CON CLOUDINARY ===
                 imagen_nueva = request.FILES.get('imagen')
                 eliminar_imagen = request.POST.get('eliminar_imagen') == 'on'
                 
@@ -932,14 +940,10 @@ def editar_producto(request, producto_id):
                 print(f"📷 producto.imagen ANTES: '{producto.imagen}'")
                 
                 if eliminar_imagen and producto.imagen:
-                    print("🗑️  ELIMINANDO imagen actual...")
-                    if hasattr(producto, 'delete_imagen_anterior'):
-                        producto.delete_imagen_anterior()
-                    else:
-                        if hasattr(producto.imagen, 'path') and os.path.isfile(producto.imagen.path):
-                            os.remove(producto.imagen.path)
+                    print("🗑️  ELIMINANDO imagen de Cloudinary...")
+                    # ✅ SIMPLIFICADO: Cloudinary maneja automáticamente la eliminación
                     producto.imagen = None
-                    print("✅ Imagen eliminada")
+                    print("✅ Imagen marcada para eliminación")
                     
                 elif imagen_nueva:
                     print(f"📷 NUEVA IMAGEN detectada:")
@@ -947,41 +951,33 @@ def editar_producto(request, producto_id):
                     print(f"   - Tamaño: {imagen_nueva.size} bytes")
                     print(f"   - Tipo: {imagen_nueva.content_type}")
                     
-                    # Validar nueva imagen
+                    # ✅ MODIFICADO: Validar nueva imagen para Cloudinary
                     ext = os.path.splitext(imagen_nueva.name)[1].lower()
                     print(f"   - Extensión: {ext}")
                     
-                    if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                    if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff']:
                         print("❌ FORMATO INVÁLIDO")
-                        messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF o WebP.')
+                        messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF, WebP, BMP o TIFF.')
                         return render(request, 'inventario/productos/editar.html', {
                             'producto': producto,
                             'categorias': Categoria.objects.all().order_by('nombre'),
                             'etiquetas': Etiqueta.objects.all()
                         })
                     
-                    if imagen_nueva.size > 5 * 1024 * 1024:
+                    # ✅ MODIFICADO: Límite aumentado para Cloudinary
+                    if imagen_nueva.size > 10 * 1024 * 1024:
                         print("❌ ARCHIVO MUY GRANDE")
-                        messages.error(request, 'La imagen es demasiado grande. Máximo 5MB.')
+                        messages.error(request, 'La imagen es demasiado grande. Máximo 10MB.')
                         return render(request, 'inventario/productos/editar.html', {
                             'producto': producto,
                             'categorias': Categoria.objects.all().order_by('nombre'),
                             'etiquetas': Etiqueta.objects.all()
                         })
                     
-                    # Eliminar imagen anterior si existe
-                    if producto.imagen:
-                        print("🗑️  Eliminando imagen anterior...")
-                        if hasattr(producto, 'delete_imagen_anterior'):
-                            producto.delete_imagen_anterior()
-                        else:
-                            if hasattr(producto.imagen, 'path') and os.path.isfile(producto.imagen.path):
-                                os.remove(producto.imagen.path)
-                    
-                    # ASIGNAR NUEVA IMAGEN
-                    print("🔄 ASIGNANDO nueva imagen...")
+                    # ✅ SIMPLIFICADO: Cloudinary reemplaza automáticamente la imagen anterior
+                    print("🔄 ASIGNANDO nueva imagen para Cloudinary...")
                     producto.imagen = imagen_nueva
-                    print(f"✅ Imagen asignada: {producto.imagen}")
+                    print(f"✅ Nueva imagen asignada: {producto.imagen}")
                 else:
                     print("ℹ️  No hay cambios en la imagen")
                 
@@ -1003,10 +999,12 @@ def editar_producto(request, producto_id):
                 print(f"✅ PRODUCTO GUARDADO!")
                 print(f"📷 producto.imagen DESPUÉS: '{producto.imagen}'")
                 
+                # ✅ MODIFICADO: Debug para Cloudinary
                 if producto.imagen:
-                    print(f"📁 Ruta: {producto.imagen.path}")
-                    print(f"🔗 URL: {producto.imagen.url}")
-                    print(f"💾 ¿Archivo existe?: {os.path.exists(producto.imagen.path)}")
+                    print(f"📷 Imagen en Cloudinary:")
+                    print(f"   - Public ID: {producto.imagen.public_id}")
+                    print(f"   - URL: {producto.imagen.url}")
+                    print(f"   - Secure URL: {producto.imagen.secure_url}")
                 
                 # Manejar etiquetas
                 etiquetas_ids = request.POST.getlist('etiquetas')

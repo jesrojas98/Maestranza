@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import os
+from cloudinary.models import CloudinaryField
 
 from requests import request
 
@@ -127,13 +128,23 @@ class Producto(models.Model):
     maneja_vencimiento = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    imagen = models.ImageField(
-        upload_to='productos/%Y/%m/',
+    
+    # ✅ CloudinaryField configurado
+    imagen = CloudinaryField(
+        verbose_name="Imagen del Producto",
+        folder='productos/',
         blank=True,
         null=True,
-        verbose_name="Imagen del Producto",
-        help_text="Imagen del producto (JPG, PNG, máx. 5MB)"
+        help_text="Imagen del producto (JPG, PNG, WebP, máx. 10MB)",
+        transformation={
+            'quality': 'auto:good',
+            'fetch_format': 'auto',
+            'width': 800,
+            'height': 600,
+            'crop': 'limit'
+        }
     )
+    
     precio = models.DecimalField(
         max_digits=12, 
         decimal_places=2, 
@@ -153,25 +164,24 @@ class Producto(models.Model):
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
         ordering = ['nombre']
-        
+            
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
 
     def get_precio_actual(self):
         """Retorna el precio actual del producto"""
         return self.precio
-
-    
+        
     def get_precio_formateado(self):
         """Retorna el precio formateado como string"""
         if self.precio:
             return f"${self.precio:,.2f}"
         return "Sin precio"
-        
+            
     def tiene_precio(self):
         """Verifica si el producto tiene precio asignado"""
         return self.precio is not None and self.precio > 0
-        
+            
     def actualizar_precio(self, nuevo_precio, save=True):
         """Actualiza el precio y la fecha de actualización"""
         from django.utils import timezone
@@ -192,21 +202,125 @@ class Producto(models.Model):
         except Inventario.DoesNotExist:
             return 0
 
-    def get_imagen_url(self):
-        """Retorna la URL de la imagen o una imagen por defecto"""
-        if self.imagen and hasattr(self.imagen, 'url'):
-            return self.imagen.url
-        return '/static/inventario/img/producto-default.png'
-       
-    def get_imagen_thumbnail(self):
-        """Retorna la URL para thumbnail (se puede implementar con Pillow más adelante)"""
-        return self.get_imagen_url()
+    # ✅ AGREGADO: Métodos auxiliares para Cloudinary
+    def _is_cloudinary_field(self):
+        """Verifica si el campo imagen es CloudinaryField"""
+        return hasattr(self.imagen, 'public_id') if self.imagen else False
 
-    def delete_imagen_anterior(self):
-        """Elimina la imagen anterior del sistema de archivos"""
+    def _is_cloudinary_configured(self):
+        """Verifica si Cloudinary está configurado correctamente"""
+        try:
+            import cloudinary
+            config = cloudinary.config()
+            return bool(config.cloud_name and config.api_key and config.api_secret)
+        except:
+            return False
+
+    # ✅ MODIFICADO: Método principal con mejor manejo de errores
+    def get_imagen_url(self, width=None, height=None, crop='limit'):
+        """Retorna la URL de la imagen o una imagen por defecto"""
+        if not self.imagen:
+            return '/static/inventario/img/producto-default.png'
+        
+        try:
+            # ✅ SI ES CLOUDINARYFIELD Y ESTÁ CONFIGURADO
+            if self._is_cloudinary_field() and self._is_cloudinary_configured():
+                if width or height:
+                    from cloudinary import CloudinaryImage
+                    transformations = {'crop': crop, 'secure': True}
+                    if width:
+                        transformations['width'] = width
+                    if height:
+                        transformations['height'] = height
+                    
+                    return CloudinaryImage(str(self.imagen.public_id)).build_url(**transformations)
+                else:
+                    return self.imagen.url
+            else:
+                # ✅ IMAGEFIELD NORMAL O CLOUDINARY SIN CONFIGURAR
+                return self.imagen.url
+                
+        except Exception as e:
+            print(f"⚠️ Error obteniendo URL de imagen: {e}")
+            try:
+                # ✅ FALLBACK: intentar obtener URL básica
+                return self.imagen.url
+            except:
+                return '/static/inventario/img/producto-default.png'
+            
+    # ✅ MÉTODO CON PARÁMETROS para thumbnail optimizado
+    def get_imagen_thumbnail(self, size=200):
+        """Retorna la URL para thumbnail optimizado con Cloudinary"""
         if self.imagen:
-            if os.path.isfile(self.imagen.path):
-                os.remove(self.imagen.path)
+            return self.get_imagen_url(width=size, height=size, crop='fill')
+        return '/static/inventario/img/producto-default.png'
+
+    # ✅ MODIFICADO: Métodos sin parámetros con manejo de errores
+    def get_imagen_card(self):
+        """Imagen optimizada para cards (150x150) - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_thumbnail(150)
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_card: {e}")
+            return self.get_imagen_url()
+    
+    def get_imagen_detalle(self):
+        """Imagen optimizada para vista de detalle (400x400) - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_url(400, 400, 'fit')
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_detalle: {e}")
+            return self.get_imagen_url()
+    
+    def get_imagen_galeria(self):
+        """Imagen optimizada para galería (800x600) - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_url(800, 600, 'fit')
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_galeria: {e}")
+            return self.get_imagen_url()
+    
+    def get_imagen_thumbnail_50(self):
+        """Thumbnail pequeño 50x50 para tabla - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_url(50, 50, 'fill')
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_thumbnail_50: {e}")
+            return self.get_imagen_url()
+    
+    def get_imagen_thumbnail_100(self):
+        """Thumbnail mediano 100x100 - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_url(100, 100, 'fill')
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_thumbnail_100: {e}")
+            return self.get_imagen_url()
+    
+    def get_imagen_thumbnail_150(self):
+        """Thumbnail grande 150x150 - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_url(150, 150, 'fill')
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_thumbnail_150: {e}")
+            return self.get_imagen_url()
+    
+    def get_imagen_thumbnail_200(self):
+        """Thumbnail extra grande 200x200 - SIN PARÁMETROS"""
+        try:
+            return self.get_imagen_url(200, 200, 'fill')
+        except Exception as e:
+            print(f"⚠️ Error en get_imagen_thumbnail_200: {e}")
+            return self.get_imagen_url()
+    
+    def tiene_imagen(self):
+        """Verifica si el producto tiene imagen - SIN PARÁMETROS"""
+        return bool(self.imagen)
+
+    # ✅ MÉTODO SIMPLIFICADO - Cloudinary maneja esto automáticamente
+    def delete_imagen_anterior(self):
+        """Cloudinary maneja automáticamente la eliminación de imágenes anteriores"""
+        # Cloudinary se encarga de esto cuando se actualiza el campo
+        pass
 
 class Lote(models.Model):
     codigo = models.CharField(max_length=50)
