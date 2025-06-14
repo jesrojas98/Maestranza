@@ -166,8 +166,11 @@ class Producto(models.Model):
         ordering = ['nombre']
             
     def __str__(self):
-        return f"{self.codigo} - {self.nombre}"
-
+        """Método __str__ con manejo de valores None"""
+        codigo = self.codigo or "SIN_CODIGO"
+        nombre = self.nombre or "Sin nombre"
+        return f"{codigo} - {nombre}"
+    
     def get_precio_actual(self):
         """Retorna el precio actual del producto"""
         return self.precio
