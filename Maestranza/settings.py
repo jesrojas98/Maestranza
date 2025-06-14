@@ -169,8 +169,28 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
 # ✅ WHITENOISE CONFIGURACIÓN
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+if os.environ.get('RAILWAY_ENVIRONMENT') or not DEBUG:
+    # En Railway o producción
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    
+    # ✅ CONFIGURACIÓN WHITENOISE PARA MANEJAR ARCHIVOS FALTANTES
+    WHITENOISE_MANIFEST_STRICT = False  # ← IMPORTANTE: No fallar si faltan archivos
+    WHITENOISE_SKIP_COMPRESS_EXTENSIONS = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 
+        'xz', 'br', 'woff', 'woff2', 'ttf', 'eot', 'otf'
+    ]
+    WHITENOISE_USE_FINDERS = True  # ← Buscar archivos usando finders
+    
+else:
+    # En desarrollo local
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
