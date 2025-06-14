@@ -177,7 +177,7 @@ STATICFILES_FINDERS = [
 # ✅ WHITENOISE CONFIGURACIÓN
 if os.environ.get('RAILWAY_ENVIRONMENT') or not DEBUG:
     # En Railway o producción
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
     
     # ✅ CONFIGURACIÓN WHITENOISE PARA MANEJAR ARCHIVOS FALTANTES
     WHITENOISE_MANIFEST_STRICT = False  # ← IMPORTANTE: No fallar si faltan archivos
