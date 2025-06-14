@@ -9,6 +9,19 @@ from django.core.exceptions import ValidationError
 import re
 
 class ProductoForm(forms.ModelForm):
+    UNIDADES_MEDIDA = [
+        ('unidad', 'Unidad'),
+        ('metro', 'Metro'),
+        ('kilogramo', 'Kilogramo'),
+        ('litro', 'Litro'),
+    ]
+    unidad_medida = forms.ChoiceField(
+        choices=UNIDADES_MEDIDA,
+        initial='unidad',
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
     class Meta:
         model = Producto
         fields = [

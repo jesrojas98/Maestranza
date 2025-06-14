@@ -515,33 +515,113 @@ def crear_producto(request):
                     maneja_vencimiento = form.cleaned_data['maneja_vencimiento']
                     activo = form.cleaned_data['activo']
                     
-                    # Verificar código único (validación adicional)
+                    # Validaciones adicionales ANTES de guardar
+                    
+                    # Verificar código único
                     if Producto.objects.filter(codigo=codigo).exists():
                         form.add_error('codigo', f'Ya existe un producto con el código "{codigo}".')
                         messages.error(request, f'Ya existe un producto con el código "{codigo}".')
                     else:
-                        # Crear producto usando el formulario
-                        producto = form.save()
+                        # ✅ DEBUG: Verificar datos del formulario
+
                         
-                        # Validaciones adicionales para imagen (mantener lógica original)
+                        # Validar imagen MUY simple - solo si hay una
                         imagen = request.FILES.get('imagen')
-                        if imagen:
-                            # Validar tipo de archivo (validación adicional)
-                            ext = os.path.splitext(imagen.name)[1].lower()
-                            if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
-                                messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF o WebP.')
-                                producto.delete()
-                                form = ProductoForm(request.POST)  # Recrear form con datos
-                            elif imagen.size > 5 * 1024 * 1024:
-                                messages.error(request, 'La imagen es demasiado grande. Máximo 5MB.')
-                                producto.delete()
-                                form = ProductoForm(request.POST)  # Recrear form con datos
-                            else:
-                                # Imagen válida, ya se guardó con form.save()
-                                pass
+                        imagen_valida = True
                         
-                        # Solo continuar si el producto no fue eliminado por errores de imagen
-                        if not messages.get_messages(request) or not any(msg.level_tag == 'error' for msg in messages.get_messages(request)):
+                        if imagen:
+                            print(f"📷 Imagen detectada: {imagen.name} ({imagen.size} bytes)")
+                            # Validación mínima
+                            ext = os.path.splitext(imagen.name)[1].lower()
+                            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp'] and imagen.size <= 5 * 1024 * 1024:
+                                print("✅ Imagen válida")
+                            else:
+                                print("❌ Imagen inválida")
+                                imagen_valida = False
+                                if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                                    messages.error(request, 'Formato de imagen no válido. Use JPG, PNG, GIF o WebP.')
+                                else:
+                                    messages.error(request, 'La imagen es demasiado grande. Máximo 5MB.')
+                        else:
+                            print("ℹ️ No se subió imagen")
+                        # Guardar SOLO si la imagen es válida (o no hay imagen)
+                        if imagen_valida:
+                            # ✅ DEBUG: Estado antes de guardar
+                            print(f"💾 Guardando producto...")
+                            print(f"   - Form valid: {form.is_valid()}")
+                            print(f"   - Form errors: {form.errors}")
+                            
+                            # Crear producto usando el formulario
+                            producto = form.save()
+                            print(f"✅ Producto creado: {producto.nombre} (ID: {producto.id})")
+                            
+                            # ✅ DEBUG: Estado de imagen después de guardar
+                            print(f"📷 Estado de imagen después de form.save():")
+                            print(f"   - producto.imagen: {producto.imagen}")
+                            if producto.imagen:
+                                print(f"   - Ruta: {producto.imagen.name}")
+                                print(f"   - URL: {producto.imagen.url}")
+                                try:
+                                    print(f"   - Archivo existe: {os.path.exists(producto.imagen.path)}")
+                                    print(f"   - Tamaño archivo: {os.path.getsize(producto.imagen.path)} bytes")
+                                except:
+                                    print(f"   - Error verificando archivo físico")
+                            else:
+                                print(f"   - Sin imagen guardada")
+                            
+                            # Forzar guardado de imagen si no se guardó
+                            if imagen and not producto.imagen:
+                                print("🔄 Imagen no se guardó, intentando guardar manualmente...")
+                                try:
+                                    producto.imagen = imagen
+                                    producto.save()
+                                    print(f"✅ Imagen guardada manualmente: {producto.imagen}")
+                                except Exception as e:
+                                    print(f"❌ Error guardando imagen manualmente: {e}")
+                            
+                            # ✅ MANEJAR PRECIO ACTUALIZADO si se estableció un precio
+                            precio = form.cleaned_data.get('precio')
+                            if precio is not None:
+                                from django.utils import timezone
+                                
+                                # Para producto nuevo, siempre actualizar fecha
+                                producto.precio_actualizado = timezone.now()
+                                producto.save()
+                                print(f"✅ Precio inicial establecido: ${precio}")
+                                
+                                # ✅ CREAR HISTORIAL DE PRECIO INICIAL (forzar para producto nuevo)
+                                try:
+                                    # Para producto nuevo, forzar creación de historial
+                                    from .models import HistorialPrecios
+                                    historial = HistorialPrecios.objects.create(
+                                        producto=producto,
+                                        proveedor=None,
+                                        precio=precio,
+                                        precio_anterior=None,  # Producto nuevo, sin precio anterior
+                                        usuario=request.user,
+                                        fecha=timezone.now(),
+                                        observaciones='Precio inicial al crear producto',
+                                        motivo='Precio inicial al crear producto'
+                                    )
+                                    print(f"✅ Historial de precio inicial creado: ID {historial.id}")
+                                    
+                                except Exception as e:
+                                    print(f"⚠️ Error creando historial directo: {e}")
+                                    # Intentar con la función como backup
+                                    try:
+                                        historial = crear_historial_precio_producto(
+                                            producto=producto,
+                                            precio_nuevo=precio,
+                                            usuario=request.user,
+                                            observaciones='Precio inicial al crear producto',
+                                            precio_anterior=None
+                                        )
+                                        if historial:
+                                            print(f"✅ Historial creado con función: ID {historial.id}")
+                                    except Exception as e2:
+                                        print(f"⚠️ Error con función también: {e2}")
+                                        pass
+                            
                             # Manejar etiquetas (mantener lógica original si es necesaria)
                             etiquetas_ids = request.POST.getlist('etiquetas')
                             if etiquetas_ids:
@@ -557,7 +637,15 @@ def crear_producto(request):
                                     defaults={'cantidad': 0}
                                 )
                             
-                            messages.success(request, f'Producto "{producto.nombre}" creado exitosamente.')
+                            # ✅ DEBUG FINAL: Estado final del producto
+                            producto.refresh_from_db()
+
+                            if producto.imagen:
+                                print(f"   - URL imagen: {producto.imagen.url}")
+                            
+                            precio_msg = f' con precio ${precio}' if precio else ''
+                            imagen_msg = ' con imagen' if producto.imagen else ''
+                            messages.success(request, f'Producto "{producto.nombre}" creado exitosamente{precio_msg}{imagen_msg}.')
                             return redirect('detalle_producto', producto_id=producto.id)
                             
             except ValueError as e:
@@ -581,6 +669,7 @@ def crear_producto(request):
         'form_data': request.POST if request.method == 'POST' else {}  # Mantener para compatibilidad
     }
     return render(request, 'inventario/productos/crear.html', context)
+
 
 @puede_gestionar_inventario
 def movimiento_inventario(request, producto_id):

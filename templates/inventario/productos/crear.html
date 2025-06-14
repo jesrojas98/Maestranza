@@ -44,22 +44,45 @@
         background-color: #e7f3ff;
         border-color: #0056b3;
     }
+    
+    /* Estilos para el campo precio */
+    .input-group .form-control {
+        border-left: 0;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: 0;
+        color: #6c757d;
+        font-weight: 500;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-plus-circle"></i> Información del Producto
-                </h5>
-            </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data" id="formCrearProducto">
-                    {% csrf_token %}
-                    
+<form method="post" enctype="multipart/form-data" id="formCrearProducto">
+    {% csrf_token %}
+    
+    <!-- ✅ CAMPO IMAGEN OCULTO DENTRO DEL FORMULARIO -->
+    {% if form.imagen %}
+        {{ form.imagen }}
+    {% else %}
+        <input type="file" 
+               class="d-none" 
+               id="imagen" 
+               name="imagen" 
+               accept="image/*">
+    {% endif %}
+    
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-plus-circle"></i> Información del Producto
+                    </h5>
+                </div>
+                <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -91,6 +114,32 @@
                                         {% endfor %}
                                     </div>
                                 {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ CAMPO PRECIO AGREGADO -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.precio.id_for_label }}" class="form-label">
+                                    <i class="bi bi-currency-dollar"></i> Precio
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.precio }}
+                                </div>
+                                {% if form.precio.errors %}
+                                    <div class="text-danger small">
+                                        {% for error in form.precio.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle text-info"></i>
+                                    Precio base del producto (opcional)
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -222,111 +271,104 @@
                             <i class="bi bi-x-lg"></i> Cancelar
                         </a>
                     </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Panel de Imagen -->
-    <div class="col-lg-3">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-image"></i> Imagen del Producto
-                </h6>
-            </div>
-            <div class="card-body">
-                <!-- Área de Upload -->
-                <div class="imagen-upload-area mb-3" id="uploadArea">
-                    <div id="uploadText">
-                        <i class="bi bi-cloud-upload display-4 text-primary mb-2"></i>
-                        <p class="mb-2">Arrastra una imagen aquí o haz clic para seleccionar</p>
-                        <small class="text-muted">JPG, PNG, GIF, WebP (máx. 5MB)</small>
-                    </div>
-                    <!-- Campo de imagen del formulario -->
-                    {% if form.imagen %}
-                        {{ form.imagen }}
-                    {% else %}
-                        <input type="file" 
-                               class="d-none" 
-                               id="imagen" 
-                               name="imagen" 
-                               accept="image/*">
-                    {% endif %}
-                </div>
-
-                <!-- Preview de Imagen -->
-                <div class="imagen-preview d-none" id="imagePreview">
-                    <img id="previewImg" src="" alt="Preview">
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
-                            <i class="bi bi-trash"></i> Quitar imagen
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Información -->
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
-                    <small>
-                        <strong>Recomendaciones:</strong><br>
-                        • Usar imágenes cuadradas (500x500px)<br>
-                        • Fondo blanco o transparente<br>
-                        • Formato JPG para mejor compresión
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-3">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-info-circle"></i> Información Importante
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <h6><i class="bi bi-lightbulb"></i> Consejos:</h6>
-                    <ul class="mb-0 small">
-                        <li>El código debe ser único en todo el sistema</li>
-                        <li>Usa códigos descriptivos (ej: MART001, TALAD001)</li>
-                        <li>La categoría ayuda a organizar y filtrar productos</li>
-                        <li>El stock mínimo genera alertas automáticas</li>
-                    </ul>
-                </div>
-                
-                <div class="alert alert-warning">
-                    <h6><i class="bi bi-gear"></i> Después de crear:</h6>
-                    <ul class="mb-0 small">
-                        <li>Se creará inventario automáticamente en todas las Bodegas</li>
-                        <li>Podrás registrar movimientos de entrada/salida</li>
-                        <li>Si configuraste stock mínimo, recibirás alertas</li>
-                    </ul>
                 </div>
             </div>
         </div>
         
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-plus-square"></i> Acciones Rápidas
-                </h6>
+        <!-- Panel de Imagen - AHORA DENTRO DEL FORMULARIO -->
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-image"></i> Imagen del Producto
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Área de Upload que activa el input oculto -->
+                    <div class="imagen-upload-area mb-3" id="uploadArea">
+                        <div id="uploadText">
+                            <i class="bi bi-cloud-upload display-4 text-primary mb-2"></i>
+                            <p class="mb-2">Arrastra una imagen aquí o haz clic para seleccionar</p>
+                            <small class="text-muted">JPG, PNG, GIF, WebP (máx. 5MB)</small>
+                        </div>
+                    </div>
+
+                    <!-- Preview de Imagen -->
+                    <div class="imagen-preview d-none" id="imagePreview">
+                        <img id="previewImg" src="" alt="Preview">
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
+                                <i class="bi bi-trash"></i> Quitar imagen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Información -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <small>
+                            <strong>Recomendaciones:</strong><br>
+                            • Usar imágenes cuadradas (500x500px)<br>
+                            • Fondo blanco o transparente<br>
+                            • Formato JPG para mejor compresión
+                        </small>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="{% url 'crear_categoria' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-tags"></i> Nueva Categoría
-                    </a>
-                    <a href="{% url 'crear_proveedor' %}" class="btn btn-outline-success btn-sm">
-                        <i class="bi bi-truck"></i> Nuevo Proveedor
-                    </a>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Información Importante
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-lightbulb"></i> Consejos:</h6>
+                        <ul class="mb-0 small">
+                            <li>El código debe ser único en todo el sistema</li>
+                            <li>Usa códigos descriptivos (ej: MART001, TALAD001)</li>
+                            <li>La categoría ayuda a organizar y filtrar productos</li>
+                            <li>El stock mínimo genera alertas automáticas</li>
+                            <li>El precio es opcional y se puede agregar después</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-gear"></i> Después de crear:</h6>
+                        <ul class="mb-0 small">
+                            <li>Se creará inventario automáticamente en todas las Bodegas</li>
+                            <li>Podrás registrar movimientos de entrada/salida</li>
+                            <li>Si configuraste stock mínimo, recibirás alertas</li>
+                            <li>El precio se puede actualizar en cualquier momento</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-plus-square"></i> Acciones Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'crear_categoria' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-tags"></i> Nueva Categoría
+                        </a>
+                        <a href="{% url 'crear_proveedor' %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-truck"></i> Nuevo Proveedor
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</form>
+<!-- ✅ FIN DEL FORMULARIO AQUÍ -->
 {% endblock %}
 
 {% block extra_js %}
@@ -358,6 +400,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Validación del campo precio
+    const precioField = document.getElementById('{{ form.precio.id_for_label }}');
+    if (precioField) {
+        precioField.addEventListener('input', function() {
+            const precio = parseFloat(this.value);
+            if (this.value && (isNaN(precio) || precio < 0)) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+
     // Nueva funcionalidad de manejo de imágenes
     const uploadArea = document.getElementById('uploadArea');
     const imageInput = document.getElementById('{% if form.imagen %}{{ form.imagen.id_for_label }}{% else %}imagen{% endif %}');
@@ -365,15 +420,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewImg = document.getElementById('previewImg');
     const uploadText = document.getElementById('uploadText');
 
-    if (uploadArea && imageInput) {
-        // Hacer visible el input file si está oculto por Django
-        if (imageInput.style.display === 'none' || imageInput.classList.contains('d-none')) {
-            imageInput.classList.remove('d-none');
-            imageInput.style.display = 'none'; // Mantenerlo oculto pero accesible
-        }
+    console.log('🔍 DEBUG: Elementos encontrados:', {
+        uploadArea: !!uploadArea,
+        imageInput: !!imageInput,
+        imagePreview: !!imagePreview,
+        previewImg: !!previewImg,
+        uploadText: !!uploadText
+    });
 
+    if (imageInput) {
+        console.log('📷 Input de imagen:', imageInput.id, imageInput.name);
+    }
+
+    if (uploadArea && imageInput) {
         // Click en área de upload
         uploadArea.addEventListener('click', function() {
+            console.log('👆 Click en área de upload');
             imageInput.click();
         });
 
@@ -394,18 +456,23 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
+                console.log('📁 Archivo arrastrado:', files[0].name);
                 handleImageUpload(files[0]);
             }
         });
 
         // Cambio en input file
         imageInput.addEventListener('change', function(e) {
+            console.log('📷 Cambio en input, archivos:', e.target.files.length);
             if (e.target.files.length > 0) {
+                console.log('📷 Archivo seleccionado:', e.target.files[0].name);
                 handleImageUpload(e.target.files[0]);
             }
         });
 
         function handleImageUpload(file) {
+            console.log('🔄 Procesando imagen:', file.name, file.size, 'bytes');
+            
             // Validar tipo de archivo
             const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
@@ -427,14 +494,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 imagePreview.classList.remove('d-none');
                 uploadArea.style.border = '2px solid #28a745';
                 uploadArea.style.backgroundColor = '#f8fff9';
+                console.log('✅ Preview mostrado');
             };
             reader.readAsDataURL(file);
 
-            // Crear un nuevo input file con el archivo seleccionado
+            // ✅ CRÍTICO: Asignar archivo al input del formulario
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             imageInput.files = dataTransfer.files;
+            
+            console.log('✅ Archivo asignado al input:', imageInput.files.length, 'archivos');
+            console.log('✅ Primer archivo:', imageInput.files[0] ? imageInput.files[0].name : 'ninguno');
         }
+    } else {
+        console.log('❌ Error: No se encontraron elementos necesarios para manejo de imágenes');
     }
 });
 
