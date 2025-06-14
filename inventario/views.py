@@ -852,6 +852,7 @@ def lista_proveedores(request):
     return render(request, 'inventario/proveedores/lista.html', context)
     
 @puede_gestionar_productos
+
 def editar_producto(request, producto_id):
     """Vista para editar un producto existente con imagen"""
     producto = get_object_or_404(Producto, id=producto_id)
@@ -999,12 +1000,16 @@ def editar_producto(request, producto_id):
                 print(f"✅ PRODUCTO GUARDADO!")
                 print(f"📷 producto.imagen DESPUÉS: '{producto.imagen}'")
                 
-                # ✅ MODIFICADO: Debug para Cloudinary
+                # ✅ CORREGIDO: Debug seguro para Cloudinary
                 if producto.imagen:
                     print(f"📷 Imagen en Cloudinary:")
-                    print(f"   - Public ID: {producto.imagen.public_id}")
-                    print(f"   - URL: {producto.imagen.url}")
-                    print(f"   - Secure URL: {producto.imagen.secure_url}")
+                    print(f"   - Public ID: {getattr(producto.imagen, 'public_id', 'N/A')}")
+                    print(f"   - URL: {getattr(producto.imagen, 'url', 'N/A')}")
+                    # Verificar si secure_url existe antes de acceder
+                    if hasattr(producto.imagen, 'secure_url'):
+                        print(f"   - Secure URL: {producto.imagen.secure_url}")
+                    else:
+                        print("   - Secure URL: No disponible")
                 
                 # Manejar etiquetas
                 etiquetas_ids = request.POST.getlist('etiquetas')
@@ -1031,6 +1036,7 @@ def editar_producto(request, producto_id):
         'etiquetas': Etiqueta.objects.all()
     }
     return render(request, 'inventario/productos/editar.html', context)
+
 
 def crear_historial_precio_producto(producto, precio_nuevo, usuario=None, observaciones='', precio_anterior=None):
     from .models import HistorialPrecios
