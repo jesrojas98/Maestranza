@@ -774,9 +774,9 @@ def alertas_stock(request):
     if sucursal_id:
         try:
             sucursal_actual = Sucursal.objects.get(id=sucursal_id, activa=True)
-            print(f"Sucursal de sesión encontrada: {sucursal_actual.nombre}")
+            
         except Sucursal.DoesNotExist:
-            print("Sucursal de sesión no encontrada")
+            
             sucursal_actual = None
     
     # Si no hay sucursal en sesión, usar la primera activa
@@ -786,44 +786,40 @@ def alertas_stock(request):
             request.session['sucursal_id'] = sucursal_actual.id
             request.session['sucursal_nombre'] = sucursal_actual.nombre
             request.session.modified = True
-            print(f"Usando primera sucursal activa: {sucursal_actual.nombre}")
+            
     
     # Consulta base de alertas
     alertas = AlertaStock.objects.filter(
         status='activa'
     ).select_related('producto', 'sucursal', 'lote').order_by('-fecha_creacion')
     
-    print(f"Alertas activas totales: {alertas.count()}")
+   
     
     # Filtros del formulario
     tipo_filter = request.GET.get('tipo')
     sucursal_filter = request.GET.get('sucursal')
     
-    print(f"Filtro tipo: {tipo_filter}")
-    print(f"Filtro sucursal GET: {sucursal_filter}")
+  
     
     # Si no se especifica sucursal en filtro, usar la de la sesión
     if not sucursal_filter and sucursal_actual:
         sucursal_filter = str(sucursal_actual.id)
-        print(f"Aplicando filtro de sucursal por defecto: {sucursal_filter}")
+      
     
     if tipo_filter:
         alertas = alertas.filter(tipo=tipo_filter)
-        print(f"Después de filtro tipo: {alertas.count()}")
+     
     
     if sucursal_filter:
         alertas = alertas.filter(sucursal_id=sucursal_filter)
-        print(f"Después de filtro sucursal: {alertas.count()}")
+        
     
     # Calcular estadísticas ANTES de la paginación
     total_alertas = alertas.count()
     alertas_stock_bajo = alertas.filter(tipo='stock_bajo').count()
     alertas_vencimiento = alertas.filter(tipo='vencimiento').count()
     
-    print(f"Estadísticas calculadas:")
-    print(f"  - Total: {total_alertas}")
-    print(f"  - Stock bajo: {alertas_stock_bajo}")
-    print(f"  - Vencimiento: {alertas_vencimiento}")
+
     
     # MOSTRAR LAS ALERTAS ENCONTRADAS
     print("Alertas encontradas:")
@@ -835,9 +831,7 @@ def alertas_stock(request):
     page_number = request.GET.get('page')
     alertas_paginadas = paginator.get_page(page_number)
     
-    print(f"Alertas en página actual: {len(alertas_paginadas.object_list)}")
-    print("=== FIN DEBUG ALERTAS_STOCK ===")
-    
+
     context = {
         'alertas': alertas_paginadas,
         'sucursales': Sucursal.objects.filter(activa=True),
