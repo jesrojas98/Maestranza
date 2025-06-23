@@ -2,17 +2,26 @@
 
 {% block title %}Alertas de Stock - Sistema de Inventario{% endblock %}
 
-{% block page_title %}Alertas de Stock{% endblock %}
+{% block page_title %}
+    Alertas de Stock
+    {% if sucursal_actual %}
+        - {{ sucursal_actual.nombre }}
+    {% endif %}
+{% endblock %}
 
 {% block page_actions %}
 <div class="btn-group" role="group">
     <button type="button" class="btn btn-outline-primary" onclick="actualizarAlertas()">
         <i class="bi bi-arrow-clockwise"></i> Actualizar Alertas
     </button>
+
 </div>
 {% endblock %}
 
 {% block content %}
+
+
+
 <!-- Filtros -->
 <div class="card mb-4">
     <div class="card-body">
@@ -35,6 +44,7 @@
                     {% for sucursal in sucursales %}
                         <option value="{{ sucursal.id }}" {% if sucursal.id == sucursal_seleccionada|add:0 %}selected{% endif %}>
                             {{ sucursal.nombre }}
+                            {% if sucursal == sucursal_actual %} (Actual){% endif %}
                         </option>
                     {% endfor %}
                 </select>
@@ -60,24 +70,21 @@
 </div>
 
 <!-- Resumen de alertas -->
-{% if alertas %}
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card text-center border-danger">
             <div class="card-body">
                 <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
-                <h4 class="text-danger">{{ alertas.paginator.count }}</h4>
-                <p class="card-text">Alertas Activas</p>
+                <h4 class="text-danger">{{ total_alertas|default:0 }}</h4>
+                <p class="card-text">Total Alertas</p>
             </div>
         </div>
     </div>
     <div class="col-md-4">
-    <div class="card text-center border-warning">
+        <div class="card text-center border-warning">
             <div class="card-body">
                 <i class="bi bi-box text-warning" style="font-size: 2rem;"></i>
-                <h4 class="text-warning">
-                    {{ alertas_stock_bajo }}
-                </h4>
+                <h4 class="text-warning">{{ alertas_stock_bajo|default:0 }}</h4>
                 <p class="card-text">Stock Bajo</p>
             </div>
         </div>
@@ -86,20 +93,17 @@
         <div class="card text-center border-info">
             <div class="card-body">
                 <i class="bi bi-calendar-x text-info" style="font-size: 2rem;"></i>
-                <h4 class="text-info">
-                    {{ alertas_vencimiento }}
-                </h4>
+                <h4 class="text-info">{{ alertas_vencimiento|default:0 }}</h4>
                 <p class="card-text">Por Vencer</p>
             </div>
         </div>
     </div>
 </div>
-{% endif %}
 
 <!-- Lista de alertas -->
 <div class="card">
     <div class="card-body">
-        {% if alertas %}
+        {% if alertas and alertas.object_list %}
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="table-light">
@@ -131,7 +135,7 @@
                                 </a>
                                 <br><small class="text-muted">{{ alerta.producto.codigo }}</small>
                             </td>
-                            <td>{{ alerta.sucursal.nombre }}</td>
+                            <td>{{ alerta.sucursal.nombre|default:"Sin sucursal" }}</td>
                             <td>
                                 <span class="badge 
                                 {% if alerta.tipo == 'stock_bajo' %}bg-warning text-dark
@@ -217,9 +221,14 @@
                         Todo el inventario está bajo control.
                     {% endif %}
                 </p>
-                <button class="btn btn-primary" onclick="actualizarAlertas()">
-                    <i class="bi bi-arrow-clockwise"></i> Verificar Alertas
-                </button>
+                <div class="mt-3">
+                    <button class="btn btn-primary me-2" onclick="actualizarAlertas()">
+                        <i class="bi bi-arrow-clockwise"></i> Verificar Alertas
+                    </button>
+                    <button class="btn btn-outline-info" onclick="debugAlertas()">
+                        <i class="bi bi-bug"></i> Debug Alertas
+                    </button>
+                </div>
             </div>
         {% endif %}
     </div>
@@ -229,16 +238,43 @@
 {% block extra_js %}
 <script>
 function actualizarAlertas() {
-    // Mostrar indicador de carga
     const btn = event.target;
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Verificando...';
     btn.disabled = true;
     
-    // Simular verificación (en una implementación real harías una llamada AJAX)
-    setTimeout(() => {
+    // Hacer llamada para generar alertas
+    fetch('/generar-alertas/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Alertas generadas:', data);
         location.reload();
-    }, 2000);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function debugAlertas() {
+    fetch('/debug-alertas/')
+    .then(response => response.json())
+    .then(data => {
+        alert(`Debug Alertas:
+Total en DB: ${data.total_alertas}
+Activas: ${data.alertas_activas}
+Sucursal en sesión: ${data.sucursal_sesion}`);
+        console.log('Debug info:', data);
+    })
+    .catch(error => {
+        console.error('Error en debug:', error);
+    });
 }
 
 // CSS para animación de giro

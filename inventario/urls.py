@@ -50,6 +50,8 @@ urlpatterns = [
     # Alertas (Gestores e Administradores)
     path('alertas/', views.alertas_stock, name='alertas_stock'),
     path('alertas/<int:alerta_id>/resolver/', views.resolver_alerta, name='resolver_alerta'),
+    path('generar-alertas/', views.generar_alertas_automaticas, name='generar_alertas'),
+    path('sincronizar-alertas/', views.sincronizar_alertas_manual, name='sincronizar_alertas'),
     
     # Proveedores (Gestores e Administradores)
     path('proveedores/', views.lista_proveedores, name='lista_proveedores'),

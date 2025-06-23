@@ -764,29 +764,79 @@ def movimiento_inventario(request, producto_id):
 @puede_ver_alertas
 def alertas_stock(request):
     """Lista de alertas de stock"""
+    
+    print("=== INICIO DEBUG ALERTAS_STOCK ===")
+    
+    # Obtener sucursal actual de la sesión (igual que en dashboard)
+    sucursal_id = request.session.get('sucursal_id')
+    sucursal_actual = None
+    
+    if sucursal_id:
+        try:
+            sucursal_actual = Sucursal.objects.get(id=sucursal_id, activa=True)
+            print(f"Sucursal de sesión encontrada: {sucursal_actual.nombre}")
+        except Sucursal.DoesNotExist:
+            print("Sucursal de sesión no encontrada")
+            sucursal_actual = None
+    
+    # Si no hay sucursal en sesión, usar la primera activa
+    if not sucursal_actual:
+        sucursal_actual = Sucursal.objects.filter(activa=True).first()
+        if sucursal_actual:
+            request.session['sucursal_id'] = sucursal_actual.id
+            request.session['sucursal_nombre'] = sucursal_actual.nombre
+            request.session.modified = True
+            print(f"Usando primera sucursal activa: {sucursal_actual.nombre}")
+    
+    # Consulta base de alertas
     alertas = AlertaStock.objects.filter(
         status='activa'
     ).select_related('producto', 'sucursal', 'lote').order_by('-fecha_creacion')
     
-    # Filtros
+    print(f"Alertas activas totales: {alertas.count()}")
+    
+    # Filtros del formulario
     tipo_filter = request.GET.get('tipo')
     sucursal_filter = request.GET.get('sucursal')
     
+    print(f"Filtro tipo: {tipo_filter}")
+    print(f"Filtro sucursal GET: {sucursal_filter}")
+    
+    # Si no se especifica sucursal en filtro, usar la de la sesión
+    if not sucursal_filter and sucursal_actual:
+        sucursal_filter = str(sucursal_actual.id)
+        print(f"Aplicando filtro de sucursal por defecto: {sucursal_filter}")
+    
     if tipo_filter:
         alertas = alertas.filter(tipo=tipo_filter)
+        print(f"Después de filtro tipo: {alertas.count()}")
     
     if sucursal_filter:
         alertas = alertas.filter(sucursal_id=sucursal_filter)
+        print(f"Después de filtro sucursal: {alertas.count()}")
     
     # Calcular estadísticas ANTES de la paginación
     total_alertas = alertas.count()
     alertas_stock_bajo = alertas.filter(tipo='stock_bajo').count()
     alertas_vencimiento = alertas.filter(tipo='vencimiento').count()
     
+    print(f"Estadísticas calculadas:")
+    print(f"  - Total: {total_alertas}")
+    print(f"  - Stock bajo: {alertas_stock_bajo}")
+    print(f"  - Vencimiento: {alertas_vencimiento}")
+    
+    # MOSTRAR LAS ALERTAS ENCONTRADAS
+    print("Alertas encontradas:")
+    for alerta in alertas[:3]:  # Solo las primeras 3 para no saturar
+        print(f"  - ID {alerta.id}: {alerta.producto.nombre} - {alerta.sucursal.nombre} - {alerta.tipo}")
+    
     # Paginación
     paginator = Paginator(alertas, 20)
     page_number = request.GET.get('page')
     alertas_paginadas = paginator.get_page(page_number)
+    
+    print(f"Alertas en página actual: {len(alertas_paginadas.object_list)}")
+    print("=== FIN DEBUG ALERTAS_STOCK ===")
     
     context = {
         'alertas': alertas_paginadas,
@@ -794,6 +844,7 @@ def alertas_stock(request):
         'tipos_alerta': AlertaStock.TIPO_CHOICES,
         'tipo_seleccionado': tipo_filter,
         'sucursal_seleccionada': sucursal_filter,
+        'sucursal_actual': sucursal_actual,
         # Estadísticas
         'total_alertas': total_alertas,
         'alertas_stock_bajo': alertas_stock_bajo,
@@ -801,6 +852,211 @@ def alertas_stock(request):
     }
     
     return render(request, 'inventario/alertas/lista.html', context)
+
+
+def generar_alertas_automaticas(request):
+    """Generar alertas automáticamente para todos los productos con problemas"""
+    if request.method == 'POST':
+        alertas_generadas = 0
+        alertas_actualizadas = 0
+        
+        # Obtener todos los inventarios
+        inventarios = Inventario.objects.select_related('producto', 'sucursal').all()
+        
+        for inventario in inventarios:
+            # 1. VERIFICAR STOCK BAJO
+            if inventario.cantidad <= inventario.producto.stock_minimo:
+                # Verificar si ya existe una alerta activa
+                alerta_existente = AlertaStock.objects.filter(
+                    producto=inventario.producto,
+                    sucursal=inventario.sucursal,
+                    tipo='stock_bajo',
+                    status='activa'
+                ).first()
+                
+                if alerta_existente:
+                    # Actualizar mensaje si cambió
+                    nuevo_mensaje = f'Stock bajo: {inventario.cantidad} unidades (mínimo: {inventario.producto.stock_minimo})'
+                    if alerta_existente.mensaje != nuevo_mensaje:
+                        alerta_existente.mensaje = nuevo_mensaje
+                        alerta_existente.save()
+                        alertas_actualizadas += 1
+                else:
+                    # Crear nueva alerta
+                    AlertaStock.objects.create(
+                        producto=inventario.producto,
+                        sucursal=inventario.sucursal,
+                        tipo='stock_bajo',
+                        mensaje=f'Stock bajo: {inventario.cantidad} unidades (mínimo: {inventario.producto.stock_minimo})',
+                        status='activa'
+                    )
+                    alertas_generadas += 1
+                    print(f"Alerta creada: {inventario.producto.nombre} en {inventario.sucursal.nombre}")
+        
+        # 2. VERIFICAR PRODUCTOS POR VENCER (próximos 30 días)
+        from datetime import timedelta
+        fecha_limite = timezone.now().date() + timedelta(days=30)
+        
+        lotes_por_vencer = Lote.objects.filter(
+            fecha_vencimiento__lte=fecha_limite,
+            fecha_vencimiento__gte=timezone.now().date()
+        ).select_related('producto')
+        
+        for lote in lotes_por_vencer:
+            # Buscar inventario de este producto en todas las sucursales
+            inventarios_producto = Inventario.objects.filter(producto=lote.producto)
+            
+            for inventario in inventarios_producto:
+                alerta_existente = AlertaStock.objects.filter(
+                    producto=lote.producto,
+                    sucursal=inventario.sucursal,
+                    lote=lote,
+                    tipo='vencimiento',
+                    status='activa'
+                ).first()
+                
+                if not alerta_existente:
+                    dias_restantes = (lote.fecha_vencimiento - timezone.now().date()).days
+                    AlertaStock.objects.create(
+                        producto=lote.producto,
+                        sucursal=inventario.sucursal,
+                        lote=lote,
+                        tipo='vencimiento',
+                        mensaje=f'Producto vence en {dias_restantes} días (Lote: {lote.codigo})',
+                        status='activa'
+                    )
+                    alertas_generadas += 1
+                    print(f"Alerta vencimiento creada: {lote.producto.nombre} - Lote {lote.codigo}")
+        
+        # 3. RESOLVER ALERTAS DE STOCK QUE YA NO APLICAN
+        alertas_stock_resolver = AlertaStock.objects.filter(
+            tipo='stock_bajo',
+            status='activa'
+        ).select_related('producto', 'sucursal')
+        
+        alertas_resueltas = 0
+        for alerta in alertas_stock_resolver:
+            try:
+                inventario = Inventario.objects.get(
+                    producto=alerta.producto,
+                    sucursal=alerta.sucursal
+                )
+                # Si el stock ya no está bajo, resolver la alerta
+                if inventario.cantidad > alerta.producto.stock_minimo:
+                    alerta.status = 'resuelta'
+                    alerta.fecha_resolucion = timezone.now()
+                    alerta.save()
+                    alertas_resueltas += 1
+                    print(f"Alerta resuelta automáticamente: {alerta.producto.nombre}")
+            except Inventario.DoesNotExist:
+                # Si no existe inventario, resolver la alerta
+                alerta.status = 'resuelta'
+                alerta.fecha_resolucion = timezone.now()
+                alerta.save()
+                alertas_resueltas += 1
+        
+        mensaje = f'Proceso completado: {alertas_generadas} alertas creadas, {alertas_actualizadas} actualizadas, {alertas_resueltas} resueltas automáticamente'
+        print(mensaje)
+        
+        return JsonResponse({
+            'success': True,
+            'alertas_generadas': alertas_generadas,
+            'alertas_actualizadas': alertas_actualizadas,
+            'alertas_resueltas': alertas_resueltas,
+            'message': mensaje
+        })
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+
+def sincronizar_alertas_manual(request):
+    """Función para ejecutar manualmente desde el admin o como vista independiente"""
+    
+    print("=== INICIANDO SINCRONIZACIÓN DE ALERTAS ===")
+    
+    # Llamar a la función de generación
+    fake_request = type('obj', (object,), {'method': 'POST'})()
+    resultado = generar_alertas_automaticas(fake_request)
+    
+    # Mostrar estadísticas actuales
+    total_alertas = AlertaStock.objects.filter(status='activa').count()
+    alertas_por_tipo = AlertaStock.objects.filter(status='activa').values('tipo').annotate(count=models.Count('tipo'))
+    
+    print(f"Total alertas activas después de sincronización: {total_alertas}")
+    for tipo in alertas_por_tipo:
+        print(f"  - {tipo['tipo']}: {tipo['count']}")
+    
+    if request:
+        return JsonResponse({
+            'message': 'Sincronización completada',
+            'total_alertas_activas': total_alertas
+        })
+    
+    return resultado
+
+def verificar_y_generar_alertas(sucursal=None):
+    """Verificar y generar alertas de stock automáticamente"""
+    
+    if sucursal:
+        inventarios = Inventario.objects.filter(sucursal=sucursal)
+    else:
+        inventarios = Inventario.objects.all()
+    
+    alertas_generadas = 0
+    
+    for inventario in inventarios:
+        # Verificar stock bajo
+        if inventario.cantidad <= inventario.producto.stock_minimo:
+            # Verificar si ya existe una alerta activa para este producto/sucursal
+            alerta_existente = AlertaStock.objects.filter(
+                producto=inventario.producto,
+                sucursal=inventario.sucursal,
+                tipo='stock_bajo',
+                status='activa'
+            ).exists()
+            
+            if not alerta_existente:
+                AlertaStock.objects.create(
+                    producto=inventario.producto,
+                    sucursal=inventario.sucursal,
+                    tipo='stock_bajo',
+                    mensaje=f'Stock bajo: {inventario.cantidad} unidades (mínimo: {inventario.producto.stock_minimo})',
+                    status='activa'
+                )
+                alertas_generadas += 1
+        
+        # Verificar productos por vencer
+        fecha_limite = timezone.now().date() + timedelta(days=30)
+        lotes_por_vencer = Lote.objects.filter(
+            producto=inventario.producto,
+            fecha_vencimiento__lte=fecha_limite,
+            fecha_vencimiento__gte=timezone.now().date()
+        )
+        
+        for lote in lotes_por_vencer:
+            alerta_existente = AlertaStock.objects.filter(
+                producto=inventario.producto,
+                sucursal=inventario.sucursal,
+                lote=lote,
+                tipo='vencimiento',
+                status='activa'
+            ).exists()
+            
+            if not alerta_existente:
+                dias_restantes = (lote.fecha_vencimiento - timezone.now().date()).days
+                AlertaStock.objects.create(
+                    producto=inventario.producto,
+                    sucursal=inventario.sucursal,
+                    lote=lote,
+                    tipo='vencimiento',
+                    mensaje=f'Producto vence en {dias_restantes} días',
+                    status='activa'
+                )
+                alertas_generadas += 1
+    
+    print(f"Alertas generadas: {alertas_generadas}")
+    return alertas_generadas
+
 
 @puede_ver_alertas
 def resolver_alerta(request, alerta_id):
@@ -1224,7 +1480,7 @@ def detalle_proveedor(request, proveedor_id):
         'lotes': lotes,
     }
     
-    return render(request, 'inventario/proveedores/detalle.html', context)
+    return render(request, 'inventario/proveedores/lista.html', context)
 
 @gestor_o_admin
 def editar_proveedor(request, proveedor_id):
