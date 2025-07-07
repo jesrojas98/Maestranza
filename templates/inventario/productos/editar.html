@@ -169,14 +169,14 @@
                                            id="precio" 
                                            name="precio" 
                                            value="{{ producto.precio|default:'' }}"
-                                           step="0.01"
+                                           step="1"
                                            min="0"
-                                           placeholder="0.00">
+                                           placeholder="0">
                                 </div>
                                 <div class="form-text">
                                     {% if producto.precio %}
                                         <i class="bi bi-info-circle text-success"></i>
-                                        Precio actual: <strong>${{ producto.precio }}</strong>
+                                        Precio actual: <strong>${{ producto.precio|floatformat:"0" }}</strong>
                                         {% if producto.precio_actualizado %}
                                             (actualizado {{ producto.precio_actualizado|date:"d/m/Y H:i" }})
                                         {% endif %}

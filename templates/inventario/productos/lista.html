@@ -296,7 +296,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <small class="text-muted">Precio:</small>
                                     {% if producto.precio %}
-                                        <span class="fw-bold text-success">${{ producto.precio }}</span>
+                                        <span class="fw-bold text-success">CLP {{ producto.precio|floatformat:"0" }}</span>
                                     {% else %}
                                         <small class="text-muted">Sin precio</small>
                                     {% endif %}
@@ -388,7 +388,7 @@
                                 <td>{{ producto.stock_minimo }}</td>
                                 <td>
                                     {% if producto.precio %}
-                                        <span class="text-success fw-bold">CLP{{ producto.precio }}</span>
+                                        <span class="text-success fw-bold">CLP {{ producto.precio|floatformat:"0" }}</span>
                                     {% else %}
                                         <span class="text-muted small">Sin precio</span>
                                     {% endif %}
