@@ -90,7 +90,7 @@
                                 {{ lote.dias_vencimiento|add:"-1"|default:"0" }} días
                             </span>
                         </td>
-                        <td>${{ lote.precio_compra }}</td>
+                        <td>CLP{{ lote.precio_compra }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'detalle_lote' lote.id %}" class="btn btn-outline-primary" title="Ver detalle">
@@ -146,7 +146,7 @@
                                 {{ lote.dias_vencimiento }} días
                             </span>
                         </td>
-                        <td>${{ lote.precio_compra }}</td>
+                        <td>CLP{{ lote.precio_compra }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'detalle_lote' lote.id %}" class="btn btn-outline-primary" title="Ver detalle">
@@ -207,7 +207,7 @@
                                 <span class="text-muted">Sin vencimiento</span>
                             {% endif %}
                         </td>
-                        <td>${{ lote.precio_compra }}</td>
+                        <td>CLP{{ lote.precio_compra }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'detalle_lote' lote.id %}" class="btn btn-outline-primary" title="Ver detalle">

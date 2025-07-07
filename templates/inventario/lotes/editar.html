@@ -87,7 +87,7 @@
                                     <i class="bi bi-currency-dollar"></i> {{ form.precio_compra.label }} *
                                 </label>
                                 <div class="input-group">
-                                    <span class="input-group-text">$</span>
+                                    <span class="input-group-text">CLP</span>
                                     {{ form.precio_compra }}
                                 </div>
                                 {% if form.precio_compra.errors %}
@@ -98,7 +98,7 @@
                                     </div>
                                 {% endif %}
                                 <div class="form-text">
-                                    Precio anterior: ${{ lote.precio_compra }}
+                                    Precio anterior: CLP{{ lote.precio_compra }}
                                     {% if form.precio_compra.value != lote.precio_compra|stringformat:"s" %}
                                         <span class="text-warning">
                                             <i class="bi bi-arrow-right"></i> Se creará nuevo registro en historial
@@ -180,7 +180,7 @@
                     <dd class="col-sm-7">{{ lote.proveedor.nombre|default:"Sin proveedor" }}</dd>
                     
                     <dt class="col-sm-5">Precio:</dt>
-                    <dd class="col-sm-7">${{ lote.precio_compra }}</dd>
+                    <dd class="col-sm-7">CLP{{ lote.precio_compra }}</dd>
                     
                     {% if lote.fecha_vencimiento %}
                     <dt class="col-sm-5">Vencimiento:</dt>

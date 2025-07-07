@@ -53,8 +53,8 @@ class ProductoForm(forms.ModelForm):
             # ✅ Widget para precio
             'precio': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '0.00',
-                'step': '0.01',
+                'placeholder': '0',
+                'step': '1',
                 'min': '0'
             }),
             'unidad_medida': forms.TextInput(attrs={
@@ -129,9 +129,9 @@ class PrecioProductoForm(forms.ModelForm):
         required=True,
         widget=forms.NumberInput(attrs={
             'class': 'form-control form-control-lg',
-            'placeholder': '0.00',
-            'step': '0.01',
-            'min': '0.01'
+            'placeholder': '0',
+            'step': '1',
+            'min': '1'
         }),
         help_text="Nuevo precio del producto"
     )
@@ -275,7 +275,7 @@ class LoteForm(forms.ModelForm):
             }),
             'precio_compra': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0'
             }),
         }
